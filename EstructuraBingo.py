@@ -1,13 +1,24 @@
 import os
 import json
 from datetime import datetime
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QGridLayout, QMessageBox, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QListWidget, QGridLayout, QMessageBox, QHBoxLayout, QDialog
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
+# Configuración inicial 
+saved_carts_path = os.path.join('Data', "Bingos.txt")
+if not os.path.exists('Data'):
+    os.makedirs('Data')
+if not os.path.exists(saved_carts_path):
+    with open(saved_carts_path, 'w') as file:
+        json.dump({}, file)
+
+
 class BingoCard(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, card_id=None):
         super().__init__(parent)
+        self.new_card_id = card_id
+        self.bingo_numbers = []
         
         # Configurar la ventana secundaria
         self.setWindowTitle('Digitalización del Cartón de Bingo')
@@ -20,7 +31,10 @@ class BingoCard(QWidget):
         
         # Establecer el layout
         self.setLayout(self.layout)
-        
+
+        if self.new_card_id:
+            self.load_bingo_card(self.new_card_id)
+    
     def create_widgets(self):
         # Etiqueta de bienvenida y entrada para el número del cartón de bingo
         bienvenida = QLabel("Crear BINGO\nInserte el código del cartón de bingo:", self)
@@ -101,39 +115,56 @@ class BingoCard(QWidget):
         if self.checkGrid() == False: return
         
         # Añadir fecha y hora de creación
-        self.creation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        hora_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if self.new_card_id:
+            self.creation_time 
+            self.modification_time = hora_actual
+        else:
+            self.creation_time = hora_actual
+            self.modification_time = None
+
 
         # Guardar en archivo
-        self.save_to_file(self.id_card, self.bingo_numbers, self.creation_time)
+        self.save_to_file(self.card_id, self.bingo_numbers, self.creation_time, self.modification_time)
 
         # Aquí puedes procesar los números y el número del cartón como necesites
-        print("Código del Cartón:", self.id_card)
+        print("Código del Cartón:", self.card_id)
         print("Números del Cartón:", self.bingo_numbers)
         print("Hora de creación:", self.creation_time)
-        QMessageBox.information(self, "Guardado", f"El cartón {self.id_card} ha sido guardado exitosamente.")
+        print("Ultima modificación:", self.modification_time)
+        
+        QMessageBox.information(self, "Guardado", f"El cartón {self.card_id} ha sido guardado exitosamente.")
 
         # Cerrar ventana de creación de bingo
         self.close()
 
     def checkID(self) -> bool:
+        #Conocer si hay ID pre-establecido
+        if self.new_card_id:
+            self.id_card_space.setText(self.new_card_id) 
+            self.id_card_space.setDisabled(True)
+            self.card_id = self.new_card_id
+            return True
+
+        else: 
+            self.card_id = self.id_card_space.text()
+
         #Verificar la existencia del ID
-        self.id_card = self.id_card_space.text()
-        if not self.id_card:
+        if not self.card_id:
             QMessageBox.critical(self, "Error", "Por favor, ingrese el código del cartón de bingo.")
             return False
 
         # Leer los datos existentes para verificar duplicados ID
-        file_path = os.path.join('Data', 'Bingos.txt')
+        file_path = saved_carts_path
         bingos = {}
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as file:
-                try:
-                    bingos = json.load(file)
-                except json.JSONDecodeError:
-                    pass
+        with open(file_path, 'r') as file:
+            try:
+                bingos = json.load(file)
+            except json.JSONDecodeError:
+                pass
         
-        if self.id_card in bingos:
-            QMessageBox.critical(self, "Error", f"El ID del cartón {self.id_card} ya ha sido usado.")
+        if self.card_id in bingos:
+            QMessageBox.critical(self, "Error", f"El ID del cartón {self.card_id} ya ha sido usado.")
             return False
         
         return True
@@ -166,30 +197,49 @@ class BingoCard(QWidget):
 
         return True
 
-    def save_to_file(self, card_number, bingo_number, creation_time):
-        # Asegurar que la carpeta Data existe
-        if not os.path.exists('Data'):
-            os.makedirs('Data')
-        
-        file_path = os.path.join('Data', 'Bingos.txt')
+    def save_to_file(self, card_number, bingo_number, creation_time, modification_time):       
+        file_path = saved_carts_path
         bingos = {}
         
-        # Leer datos existentes si el archivo ya existe
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as file:
-                try:
-                    bingos = json.load(file)
-                except json.JSONDecodeError:
-                    pass
+        # Leer datos existentes 
+        with open(file_path, 'r') as file:
+            try:
+                bingos = json.load(file)
+            except json.JSONDecodeError:
+                pass
         
         # Añadir el nuevo bingo
         bingos[card_number] = {
             "bingo_numbers": bingo_number,
-            "creation_time": creation_time}
+            "creation_time": creation_time,
+            "modification_time": modification_time}
         
         # Escribir los datos actualizados de nuevo al archivo
         with open(file_path, 'w') as file:
             json.dump(bingos, file, indent=4)
+
+    def load_bingo_card(self, card_id):
+        file_path = saved_carts_path
+        if not os.path.exists(file_path):
+            return
+        
+        with open(file_path, 'r') as file:
+            try:
+                bingos = json.load(file)
+                if card_id in bingos:
+                    bingo_data = bingos[card_id]["bingo_numbers"]
+
+                    #Establecer hora de creación
+                    self.creation_time = bingos[card_id]["creation_time"]
+                    
+                    #Establecer celdas del bingo
+                    for i, row in enumerate(bingo_data):
+                        for j, value in enumerate(row):
+                            if value != "BINGO" and self.cells[i][j] is not None:
+                                self.cells[i][j].setText(str(value))
+            except json.JSONDecodeError:
+                QMessageBox.critical(self, "Error", "No se pudo cargar el cartón de bingo.")
+
 
 
 if __name__ == "__main__":
