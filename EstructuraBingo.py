@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QGridLayout, QMessageBox, QHBoxLayout
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -99,12 +100,16 @@ class BingoCard(QWidget):
         #Verificar estado del grid
         if self.checkGrid() == False: return
         
+        # Añadir fecha y hora de creación
+        self.creation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         # Guardar en archivo
-        self.save_to_file(self.id_card, self.bingo_numbers)
+        self.save_to_file(self.id_card, self.bingo_numbers, self.creation_time)
 
         # Aquí puedes procesar los números y el número del cartón como necesites
-        print(f"Código del Cartón: {self.id_card}")
+        print("Código del Cartón:", self.id_card)
         print("Números del Cartón:", self.bingo_numbers)
+        print("Hora de creación:", self.creation_time)
         QMessageBox.information(self, "Guardado", f"El cartón {self.id_card} ha sido guardado exitosamente.")
 
         # Cerrar ventana de creación de bingo
@@ -161,7 +166,7 @@ class BingoCard(QWidget):
 
         return True
 
-    def save_to_file(self, card_number, bingo_numbers):
+    def save_to_file(self, card_number, bingo_number, creation_time):
         # Asegurar que la carpeta Data existe
         if not os.path.exists('Data'):
             os.makedirs('Data')
@@ -178,7 +183,9 @@ class BingoCard(QWidget):
                     pass
         
         # Añadir el nuevo bingo
-        bingos[card_number] = bingo_numbers
+        bingos[card_number] = {
+            "bingo_numbers": bingo_number,
+            "creation_time": creation_time}
         
         # Escribir los datos actualizados de nuevo al archivo
         with open(file_path, 'w') as file:
