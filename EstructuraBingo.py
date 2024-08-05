@@ -67,8 +67,10 @@ class BingoCard(QWidget):
             label.setFont(QFont("Arial", 14))
             grid_layout.addWidget(label, 0, col)
         
-        self.cells = {}
+        # Guardar numeros en matriz cells
+        self.cells = []
         for i in range(5):
+            row = []
             for j in range(5):
                 if i == 2 and j == 2:
                     # Espacio libre en el centro del cartón de bingo
@@ -77,14 +79,16 @@ class BingoCard(QWidget):
                     cell.setFixedSize(40, 40)
                     cell.setStyleSheet("background-color: lightgrey;")
                     grid_layout.addWidget(cell, i + 1, j)
-                    self.cells[(i, j)] = cell
-                else:
-                    # Espacios para que el usuario ingrese los números
-                    cell = QLineEdit(self)
-                    cell.setFixedSize(40, 40)
-                    cell.setAlignment(Qt.AlignCenter)
-                    grid_layout.addWidget(cell, i + 1, j)
-                    self.cells[(i, j)] = cell
+                    row.append(None)
+                    continue
+                    
+                # Espacios para que el usuario ingrese los números
+                cell = QLineEdit(self)
+                cell.setFixedSize(40, 40)
+                cell.setAlignment(Qt.AlignCenter)
+                grid_layout.addWidget(cell, i + 1, j)
+                row.append(cell)
+            self.cells.append(row)
         
         self.layout.addWidget(grid_frame)
     
@@ -93,22 +97,7 @@ class BingoCard(QWidget):
         if self.checkID() == False: return
 
         #Verificar estado del grid
-        self.bingo_numbers = {}
-        numbers_set = set()
-        for key, cell in self.cells.items():
-            if isinstance(cell, QLineEdit):
-                value = cell.text()
-                if not value.isdigit():
-                    QMessageBox.critical(self, "Error", "Todas las casillas deben estar llenas con números validos.")
-                    return
-                if int(value) in numbers_set:
-                    QMessageBox.critical(self, "Error", "No se pueden repetir números en diferentes casillas.")
-                    return
-                if int(value) > 80:
-                    QMessageBox.critical(self, "Error", "Los números deben ser menores o iguales a 80.")
-                    return
-                self.bingo_numbers[str(key)] = int(value)
-                numbers_set.add(int(value))
+        if self.checkGrid() == False: return
         
         # Guardar en archivo
         self.save_to_file(self.id_card, self.bingo_numbers)
@@ -142,6 +131,34 @@ class BingoCard(QWidget):
             QMessageBox.critical(self, "Error", f"El ID del cartón {self.id_card} ya ha sido usado.")
             return False
         
+        return True
+
+    def checkGrid(self) -> bool:
+        #Verificar estado del grid
+        self.bingo_numbers = []
+        numbers_set = set()
+        for row in self.cells:
+            row_numbers = []
+            for cell in row:
+                if cell is None:
+                    row_numbers.append("BINGO")
+                    continue
+
+                value = cell.text()
+                if not value.isdigit():
+                    QMessageBox.critical(self, "Error", "Todas las casillas deben estar llenas con números válidos.")
+                    return False
+                if int(value) > 80:
+                    QMessageBox.critical(self, "Error", "Los números deben ser menores o iguales a 80.")
+                    return False
+                if int(value) in numbers_set:
+                    QMessageBox.critical(self, "Error", "No se pueden repetir números en diferentes casillas.")
+                    return False
+                
+                row_numbers.append(int(value))
+                numbers_set.add(int(value))
+            self.bingo_numbers.append(row_numbers)
+
         return True
 
     def save_to_file(self, card_number, bingo_numbers):
