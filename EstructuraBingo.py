@@ -16,7 +16,6 @@ class BingoCard(QWidget):
         
         # Crear widgets y el grid de entrada
         self.create_widgets()
-        self.create_grid()
         
         # Establecer el layout
         self.setLayout(self.layout)
@@ -26,19 +25,35 @@ class BingoCard(QWidget):
         bienvenida = QLabel("Crear BINGO\nInserte el código del cartón de bingo:", self)
         bienvenida.setAlignment(Qt.AlignCenter)
         bienvenida.setFont(QFont("Arial", 12))
+        self.layout.addWidget(bienvenida)
         
         self.id_card_space = QLineEdit(self)
         self.id_card_space.setFixedWidth(250)
         self.id_card_space.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.id_card_space)
         
         # Texto explicativo
         instructions = QLabel("\nRellene la plantilla de a continuación de acuerdo con su cartón físico.", self)
         instructions.setAlignment(Qt.AlignCenter)
         instructions.setFont(QFont("Arial", 12))
-        
-        self.layout.addWidget(bienvenida)
-        self.layout.addWidget(self.id_card_space)
         self.layout.addWidget(instructions)
+
+        #Crear grid
+        self.create_grid()
+
+        # Botones para guardar y cancelar
+        button_frame = QWidget()
+        button_layout = QHBoxLayout(button_frame)
+        
+        save_button = QPushButton("Guardar", self)
+        save_button.clicked.connect(self.save_numbers)
+        button_layout.addWidget(save_button)
+        
+        cancel_button = QPushButton("Cancelar", self)
+        cancel_button.clicked.connect(self.close)
+        button_layout.addWidget(cancel_button)
+        
+        self.layout.addWidget(button_frame)
 
     def create_grid(self):
         grid_frame = QWidget()
@@ -72,37 +87,25 @@ class BingoCard(QWidget):
                     self.cells[(i, j)] = cell
         
         self.layout.addWidget(grid_frame)
-        
-        # Botones para guardar y cancelar
-        button_frame = QWidget()
-        button_layout = QHBoxLayout(button_frame)
-        
-        save_button = QPushButton("Guardar", self)
-        save_button.clicked.connect(self.save_numbers)
-        button_layout.addWidget(save_button)
-        
-        cancel_button = QPushButton("Cancelar", self)
-        cancel_button.clicked.connect(self.close)
-        button_layout.addWidget(cancel_button)
-        
-        self.layout.addWidget(button_frame)
     
     def save_numbers(self):
-        self.id_card = self.id_card_space.text()
-        if not self.id_card:
-            QMessageBox.critical(self, "Error", "Por favor, ingrese el código del cartón de bingo.")
-            return
-        
+        #Verificar el ID del tarjeton
+        if self.checkID() == False: return
+
+        #Verificar estado del grid
         self.bingo_numbers = {}
         numbers_set = set()
         for key, cell in self.cells.items():
             if isinstance(cell, QLineEdit):
                 value = cell.text()
                 if not value.isdigit():
-                    QMessageBox.critical(self, "Error", "Todas las casillas deben estar llenas con números.")
+                    QMessageBox.critical(self, "Error", "Todas las casillas deben estar llenas con números validos.")
                     return
                 if int(value) in numbers_set:
                     QMessageBox.critical(self, "Error", "No se pueden repetir números en diferentes casillas.")
+                    return
+                if int(value) > 80:
+                    QMessageBox.critical(self, "Error", "Los números deben ser menores o iguales a 80.")
                     return
                 self.bingo_numbers[str(key)] = int(value)
                 numbers_set.add(int(value))
@@ -117,6 +120,29 @@ class BingoCard(QWidget):
 
         # Cerrar ventana de creación de bingo
         self.close()
+
+    def checkID(self) -> bool:
+        #Verificar la existencia del ID
+        self.id_card = self.id_card_space.text()
+        if not self.id_card:
+            QMessageBox.critical(self, "Error", "Por favor, ingrese el código del cartón de bingo.")
+            return False
+
+        # Leer los datos existentes para verificar duplicados ID
+        file_path = os.path.join('Data', 'Bingos.txt')
+        bingos = {}
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as file:
+                try:
+                    bingos = json.load(file)
+                except json.JSONDecodeError:
+                    pass
+        
+        if self.id_card in bingos:
+            QMessageBox.critical(self, "Error", f"El ID del cartón {self.id_card} ya ha sido usado.")
+            return False
+        
+        return True
 
     def save_to_file(self, card_number, bingo_numbers):
         # Asegurar que la carpeta Data existe
