@@ -87,7 +87,7 @@ class BingoCard(QWidget):
         button_layout = QHBoxLayout(button_frame)
         
         save_button = QPushButton("Guardar", self)
-        save_button.clicked.connect(self.save_numbers)
+        save_button.clicked.connect(self.save_data)
         button_layout.addWidget(save_button)
         
         cancel_button = QPushButton("Cancelar", self)
@@ -133,7 +133,7 @@ class BingoCard(QWidget):
         
         self.layout.addWidget(grid_frame)
     
-    def save_numbers(self):
+    def save_data(self):
         #Verificar el ID del tarjeton
         if self.checkID() == False: return
 
@@ -366,7 +366,7 @@ class EditViewWindow(QWidget):
         info_label.setFont(QFont("Arial", 14))
         bingo_layout.addWidget(info_label)
 
-        # Listar los bingos
+        # Establecer ScrollBar
         scroll_area = QScrollArea(self.bingo_window)
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
@@ -384,20 +384,19 @@ class EditViewWindow(QWidget):
         # Leer bingos desde el archivo
         file_path = saved_carts_path
         bingos = {}
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as file:
-                try:
-                    bingos = json.load(file)
-                except json.JSONDecodeError:
-                    QMessageBox.critical(self, "Error", "No se pudo cargar los cartones de bingo.")
-                    return
+        with open(file_path, 'r') as file:
+            try:
+                bingos = json.load(file)
+            except json.JSONDecodeError:
+                QMessageBox.critical(self, "Error", "No se pudo cargar los cartones de bingo.")
+                return
 
         for card_id, data in bingos.items():
             bingo_frame = QFrame(self.bingo_window)
             bingo_layout = QHBoxLayout(bingo_frame)
 
             # Mostrar ID, fecha de creación y última modificación
-            info = f"ID: {card_id}\nCreación: {data['creation_time']}\nÚltima Modificación: {data.get('last_modified', 'N/A')}"
+            info = f"ID: {card_id}\nCreación: {data['creation_time']}\nÚltima Modificación: {data['modification_time']}"
             info_label = QLabel(info, self.bingo_window)
             info_label.setFont(QFont("Arial", 12))
             bingo_layout.addWidget(info_label)
@@ -417,6 +416,9 @@ class EditViewWindow(QWidget):
             layout.addWidget(bingo_frame)
 
     def edit_bingo_card(self, card_id):
+        # Cerrar la ventana de ver/editar bingo
+        self.bingo_window.close()
+        
         self.bingo_card_window = BingoCard(card_id=card_id)
         self.bingo_card_window.show()
 
