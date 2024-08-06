@@ -1,12 +1,12 @@
 import os
 import json
 from datetime import datetime
-from PyQt5.QtWidgets import (QWidget, QMainWindow,
+from PyQt5.QtWidgets import (QWidget, QMainWindow, QFrame, QScrollArea,
                             QVBoxLayout, QLabel, QLineEdit, QPushButton, 
                             QListWidget, QGridLayout, QMessageBox, 
                             QHBoxLayout, QDialog)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QPixmap
 from PIL import Image, ImageDraw, ImageFont
 
 # Configuración inicial Bingos
@@ -201,7 +201,7 @@ class BingoCard(QWidget):
             row_numbers = []
             for cell in row:
                 if cell is None:
-                    row_numbers.append("BINGO")
+                    row_numbers.append("GO")
                     continue
 
                 value = cell.text()
@@ -253,7 +253,7 @@ class BingoCard(QWidget):
         # Dibujar números en la cuadrícula
         for i, row in enumerate(bingo_number):
             for j, number in enumerate(row):
-                if number == "BINGO":
+                if number == "GO":
                     draw.rectangle([(j * cell_size, header_size + i * cell_size), 
                                     ((j + 1) * cell_size, header_size + (i + 1) * cell_size)], 
                                     fill=free_space_color)
@@ -291,8 +291,6 @@ class BingoCard(QWidget):
 
     def load_bingo_card(self, card_id):
         file_path = saved_carts_path
-        if not os.path.exists(file_path):
-            return
         
         with open(file_path, 'r') as file:
             try:
@@ -306,18 +304,120 @@ class BingoCard(QWidget):
                     #Establecer celdas del bingo
                     for i, row in enumerate(bingo_data):
                         for j, value in enumerate(row):
-                            if value != "BINGO" and self.cells[i][j] is not None:
-                                self.cells[i][j].setText(str(value))
+                            if self.cells[i][j] is None:  # Ignorar el espacio libre en el centro
+                                continue
+                            self.cells[i][j].setText(str(value))
             except json.JSONDecodeError:
                 QMessageBox.critical(self, "Error", "No se pudo cargar el cartón de bingo.")
 
 
+# Ventana de edición de contenido guardado
+class EditViewWindow(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Editar/Ver Juego')
+        self.setGeometry(100, 100, 800, 600)
+        
+        # Layout principal
+        self.layout = QVBoxLayout()
+        
+        # Opciones de edición/visualización
+        self.create_options()
+        
+        self.setLayout(self.layout)
 
-if __name__ == "__main__":
-    import sys
-    from PyQt5.QtWidgets import QApplication
-    
-    app = QApplication(sys.argv)
-    window = BingoCard()
-    window.show()
-    sys.exit(app.exec_())
+    def create_options(self):
+        # Introducción
+        intro_label = QLabel("Bienvenido a la sección de edición y visualización \nElija la opción que desea realizar:", self)
+        intro_label.setAlignment(Qt.AlignCenter)
+        intro_label.setFont(QFont("Arial", 16))
+        self.layout.addWidget(intro_label)
+
+        # Opción para editar/ver juego
+        game_button = QPushButton("Editar/Ver Juego", self)
+        game_button.clicked.connect(self.edit_view_game)
+        self.layout.addWidget(game_button)
+
+        # Opción para editar/ver bingo
+        bingo_button = QPushButton("Editar/Ver Bingo", self)
+        bingo_button.clicked.connect(self.edit_view_bingo)
+        self.layout.addWidget(bingo_button)
+
+        # Opción para salir
+        exit_button = QPushButton("Salir", self)
+        exit_button.clicked.connect(self.close)
+        self.layout.addWidget(exit_button)
+
+    def edit_view_game(self):
+        QMessageBox.information(self, "Editar/Ver Juego", "Funcionalidad de edición y visualización de juegos aún no implementada.")
+
+    def edit_view_bingo(self):
+        # Crear ventana para mostrar los bingos
+        self.bingo_window = QWidget()
+        self.bingo_window.setWindowTitle('Editar/Ver Bingo')
+        self.bingo_window.setGeometry(150, 150, 1000, 800)
+
+        # Layout principal para la ventana de bingos
+        bingo_layout = QVBoxLayout()
+
+        # Mensaje al usuario
+        info_label = QLabel("Haga click sobre el cartón que desea editar", self.bingo_window)
+        info_label.setAlignment(Qt.AlignCenter)
+        info_label.setFont(QFont("Arial", 14))
+        bingo_layout.addWidget(info_label)
+
+        # Listar los bingos
+        scroll_area = QScrollArea(self.bingo_window)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        self.list_bingos(scroll_layout)
+
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(scroll_widget)
+        bingo_layout.addWidget(scroll_area)
+
+        self.bingo_window.setLayout(bingo_layout)
+        self.bingo_window.show()
+
+    def list_bingos(self, layout):
+        # Leer bingos desde el archivo
+        file_path = saved_carts_path
+        bingos = {}
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as file:
+                try:
+                    bingos = json.load(file)
+                except json.JSONDecodeError:
+                    QMessageBox.critical(self, "Error", "No se pudo cargar los cartones de bingo.")
+                    return
+
+        for card_id, data in bingos.items():
+            bingo_frame = QFrame(self.bingo_window)
+            bingo_layout = QHBoxLayout(bingo_frame)
+
+            # Mostrar ID, fecha de creación y última modificación
+            info = f"ID: {card_id}\nCreación: {data['creation_time']}\nÚltima Modificación: {data.get('last_modified', 'N/A')}"
+            info_label = QLabel(info, self.bingo_window)
+            info_label.setFont(QFont("Arial", 12))
+            bingo_layout.addWidget(info_label)
+
+            # Mostrar imagen del cartón de bingo
+            img_path = data["img_path"]
+            img_label = QLabel(self.bingo_window)
+            pixmap = QPixmap(img_path)
+            img_label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
+            bingo_layout.addWidget(img_label)
+
+            # Botón para editar el cartón
+            edit_button = QPushButton("Editar", self.bingo_window)
+            edit_button.clicked.connect(lambda _, card_id=card_id: self.edit_bingo_card(card_id))
+            bingo_layout.addWidget(edit_button)
+
+            layout.addWidget(bingo_frame)
+
+    def edit_bingo_card(self, card_id):
+        self.bingo_card_window = BingoCard(card_id=card_id)
+        self.bingo_card_window.show()
+
+
