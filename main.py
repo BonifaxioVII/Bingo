@@ -75,7 +75,10 @@ class MainWindow(QWidget):
     
     # Función para manejar el evento de "Editar/Ver Juegos y Cartones"
     def editar_ver_juegos(self):
-        QMessageBox.information(self, "Editar/Ver Juegos", "Has seleccionado 'Editar/Ver Juegos'.")
+        # Crear y mostrar la ventana de EditViewWindow
+        #self.edit_card_window = EditViewWindow()
+        #self.edit_card_window.show()
+        QMessageBox.information(self, "Editar/ver", "Has seleccionado 'Editar/Ver juego'.")
 
     # Función para manejar el evento de "Salir"
     def salir(self):
