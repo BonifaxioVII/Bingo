@@ -9,10 +9,12 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap, QColor
 from PIL import Image, ImageDraw, ImageFont
 
-# Configuración inicial Bingos
+# Configuración inicial
 def conf_carts():
     # Ruta de los BingosInfo
     saved_carts_path = os.path.join('Data', "Bingos.txt")
+    # Ruta de los juegosInfo
+    saved_games_path = os.path.join('Data', "Juegos.txt")
     # Crear carpeta data si no existe
     if not os.path.exists('Data'):
         os.makedirs('Data')
@@ -20,13 +22,18 @@ def conf_carts():
     if not os.path.exists(saved_carts_path):
         with open(saved_carts_path, 'w') as file:
             json.dump({}, file)
+    # Crear txt Juegos si no existe
+    if not os.path.exists(saved_games_path):
+        with open(saved_games_path, 'w') as file:
+            json.dump({}, file)
     # Asegurar que la carpeta ImgCard existe
     img_cart_dir = os.path.join('Data', 'ImgCard')
     if not os.path.exists(img_cart_dir):
         os.makedirs(img_cart_dir)
 
-    return saved_carts_path, img_cart_dir
-saved_carts_path, img_cart_dir = conf_carts()
+    return saved_carts_path, saved_games_path, img_cart_dir
+saved_carts_path, saved_games_path, img_cart_dir = conf_carts()
+
 
 # Interfaz del cartón de Bingo
 class BingoCard(QWidget):
@@ -461,6 +468,10 @@ class NewGameWindow(QWidget):
         with open(saved_carts_path, 'r') as file:
             self.bingos = json.load(file)
 
+        # Leer los datos existentes de juegos
+        with open(saved_games_path, 'r') as file:
+            self.juegos = json.load(file)
+
         # Crear widgets
         self.create_widgets()
 
@@ -498,7 +509,7 @@ class NewGameWindow(QWidget):
         button_layout = QHBoxLayout(button_frame)
         
         play_button = QPushButton("Jugar", self)
-        play_button.clicked.connect(self.play_game)
+        play_button.clicked.connect(self.check_game)
         button_layout.addWidget(play_button)
         
         cancel_button = QPushButton("Cancelar", self)
@@ -529,7 +540,7 @@ class NewGameWindow(QWidget):
             self.close()
             self.new_bingo_window.closeEvent = self.refresh_window
             
-    def play_game(self):
+    def check_game(self):
         # Obtener nombre del juego
         game_name = self.game_name_input.text()
         if not game_name:
@@ -543,13 +554,41 @@ class NewGameWindow(QWidget):
             return
         
         selected_bingos = [item.data(Qt.UserRole) for item in selected_items]
-        
+                
+        # Guardar datos en Juegos.txt
+        self.save_game_to_file(game_name, selected_bingos)
+
         # Aquí se procesarán los bingos seleccionados para el juego
         print("Nombre del Juego:", game_name)
         print("Cartones de Bingo Seleccionados:", selected_bingos)
-        
+
+    def play_game(self):
         # Aquí implementarás la funcionalidad del juego en el futuro
         self.close()
+
+    def save_game_to_file(self, game_name, selected_bingos):
+        file_path = saved_games_path
+        # Crear estructura de juego
+        hora_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.creation_time = hora_actual
+        self.modification_time = None
+
+        # Leer datos existentes si el archivo ya existe
+        with open(file_path, 'r') as file:
+            games = json.load(file)
+        
+        game_data = {
+            "bingos": selected_bingos,
+            "rounds": {},
+            "creation_time": self.creation_time,
+            "modification_time": self.modification_time}
+
+        # Añadir el nuevo juego
+        games[game_name] = game_data
+        
+        # Escribir los datos actualizados de nuevo al archivo
+        with open(file_path, 'w') as file:
+            json.dump(games, file, indent=4)
 
     def refresh_window(self, event):
         self.__init__()

@@ -1,0 +1,10 @@
+{
+    "Prueba1": {
+        "bingos": [
+            "A1231"
+        ],
+        "rounds": {},
+        "creation_time": "2024-08-07 16:57:34",
+        "modification_time": null
+    }
+}
