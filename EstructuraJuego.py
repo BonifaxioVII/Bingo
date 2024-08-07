@@ -159,6 +159,7 @@ class GameWindow(QWidget):
         self.save_game_to_file()
         
         QMessageBox.information(self, "Ronda Guardada", f"La ronda {round_number} ha sido guardada exitosamente.")
+        self.close()
 
     def save_game_to_file(self):        
         # Actualizar datos del juego en el archivo

@@ -144,12 +144,12 @@ class BingoCard(QWidget):
         self.save_to_file(self.card_id, self.bingo_numbers, self.creation_time, self.modification_time, self.img_save_path)
 
         # Aquí puedes procesar los números y el número del cartón como necesites
-        print("Cartón creado exitosamente")
-        print("Código del Cartón:", self.card_id)
-        print("Números del Cartón:", self.bingo_numbers)
-        print("Hora de creación:", self.creation_time)
-        print("Ultima modificación:", self.modification_time)
-        print("Ruta de imagen:", self.img_save_path)
+        print("... ...\nCartón creado exitosamente.")
+        print(">>> Código del Cartón:", self.card_id)
+        print(">>> Números del Cartón:", self.bingo_numbers)
+        print(">>> Hora de creación:", self.creation_time)
+        print(">>> Ultima modificación:", self.modification_time)
+        print(">>> Ruta de imagen:", self.img_save_path)
         
         QMessageBox.information(self, "Guardado", f"El cartón {self.card_id} ha sido guardado exitosamente.")
 
@@ -542,9 +542,9 @@ class NewGameWindow(QWidget):
         self.save_game_to_file(game_name, selected_bingos)
 
         # Aquí se procesarán los bingos seleccionados para el juego
-        print("Juego creado exitosamente")
-        print("Nombre del Juego:", game_name)
-        print("Cartones de Bingo Seleccionados:", selected_bingos)
+        print("... ...\nJuego creado exitosamente.")
+        print(">>> Nombre del Juego:", game_name)
+        print(">>> Cartones de Bingo Seleccionados:", selected_bingos)
         
         self.close()
         self.current_game = GameWindow(game_name)
