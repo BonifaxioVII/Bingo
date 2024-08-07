@@ -57,19 +57,19 @@ class GameWindow(QWidget):
         # Título de la aplicación
         title_label = QLabel("BingoGo", self)
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setFont(QFont("Arial", 20))
+        title_label.setFont(QFont("Arial", 30))
         self.layout.addWidget(title_label)
         
         # Información del juego
         game_info_label = QLabel(f"Juego: {self.game_name}\nRonda número: {len(self.current_game['rounds']) + 1}", self)
         game_info_label.setAlignment(Qt.AlignCenter)
-        game_info_label.setFont(QFont("Arial", 16))
+        game_info_label.setFont(QFont("Arial", 26))
         self.layout.addWidget(game_info_label)
         
         # Instrucciones
         instructions_label = QLabel("Inserte la forma del bingo que se jugará", self)
         instructions_label.setAlignment(Qt.AlignCenter)
-        instructions_label.setFont(QFont("Arial", 14))
+        instructions_label.setFont(QFont("Arial", 24))
         self.layout.addWidget(instructions_label)
                 
         self.create_grid()
@@ -92,6 +92,16 @@ class GameWindow(QWidget):
         # Cartón de bingo en blanco
         self.bingo_grid = QGridLayout()
         self.bingo_buttons = []
+        
+        # Agregar las letras B, I, N, G, O
+        headers = ['B', 'I', 'N', 'G', 'O']
+        for i, header in enumerate(headers):
+            label = QLabel(header, self)
+            label.setAlignment(Qt.AlignCenter)
+            label.setFont(QFont("Arial", 12, QFont.Bold))
+            self.bingo_grid.addWidget(label, 0, i)
+
+        # Crear botones de las casillas de bingo
         for i in range(5):
             row = []
             for j in range(5):
@@ -100,7 +110,7 @@ class GameWindow(QWidget):
                 button.setCheckable(True)
                 button.setStyleSheet("background-color: white;")
                 button.clicked.connect(self.toggle_button_color)
-                self.bingo_grid.addWidget(button, i, j)
+                self.bingo_grid.addWidget(button, i + 1, j)  # Desplazar una fila hacia abajo
                 row.append(button)
             self.bingo_buttons.append(row)
         

@@ -1,1 +1,10 @@
-{}
+{
+    "P1": {
+        "bingos": [
+            "A1234"
+        ],
+        "rounds": {},
+        "creation_time": "2024-08-07 17:46:56",
+        "modification_time": null
+    }
+}
