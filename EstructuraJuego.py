@@ -134,7 +134,11 @@ class GameWindow(QWidget):
 
     def save_round(self):
         round_number = len(self.current_game['rounds']) + 1
-        round_data = {"pattern": []}
+        round_data = {
+            "pattern": [],
+            "creation_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "modification_time": None
+        }
         
         for i in range(5):
             row = []
@@ -156,10 +160,8 @@ class GameWindow(QWidget):
         
         QMessageBox.information(self, "Ronda Guardada", f"La ronda {round_number} ha sido guardada exitosamente.")
 
-    def save_game_to_file(self):
-        file_path = saved_games_path
-        
+    def save_game_to_file(self):        
         # Actualizar datos del juego en el archivo
-        with open(file_path, 'w') as file:
+        with open(saved_games_path, 'w') as file:
             json.dump(self.games, file, indent=4)
 
