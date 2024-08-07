@@ -8,31 +8,8 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QFrame, QScrollArea,
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap, QColor
 from PIL import Image, ImageDraw, ImageFont
-
-# Configuración inicial
-def conf_carts():
-    # Ruta de los BingosInfo
-    saved_carts_path = os.path.join('Data', "Bingos.txt")
-    # Ruta de los juegosInfo
-    saved_games_path = os.path.join('Data', "Juegos.txt")
-    # Crear carpeta data si no existe
-    if not os.path.exists('Data'):
-        os.makedirs('Data')
-    # Crear txt Bingos si no existe
-    if not os.path.exists(saved_carts_path):
-        with open(saved_carts_path, 'w') as file:
-            json.dump({}, file)
-    # Crear txt Juegos si no existe
-    if not os.path.exists(saved_games_path):
-        with open(saved_games_path, 'w') as file:
-            json.dump({}, file)
-    # Asegurar que la carpeta ImgCard existe
-    img_cart_dir = os.path.join('Data', 'ImgCard')
-    if not os.path.exists(img_cart_dir):
-        os.makedirs(img_cart_dir)
-
-    return saved_carts_path, saved_games_path, img_cart_dir
-saved_carts_path, saved_games_path, img_cart_dir = conf_carts()
+from EstructuraJuego import GameWindow
+from EstructuraJuego import saved_carts_path, saved_games_path, img_cart_dir
 
 
 # Interfaz del cartón de Bingo
@@ -561,6 +538,10 @@ class NewGameWindow(QWidget):
         # Aquí se procesarán los bingos seleccionados para el juego
         print("Nombre del Juego:", game_name)
         print("Cartones de Bingo Seleccionados:", selected_bingos)
+        
+        self.close()
+        self.current_game = GameWindow(game_name)
+        self.current_game.show()
 
     def play_game(self):
         # Aquí implementarás la funcionalidad del juego en el futuro
