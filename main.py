@@ -1,10 +1,10 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from EstructuraBingo import BingoCard, EditViewWindow, NewGameWindow
 
-class MainWindow(QWidget): 
+class MainWindow(QMainWindow): 
     def __init__(self):
         super().__init__()
         
@@ -16,8 +16,9 @@ class MainWindow(QWidget):
         self.setWindowTitle('BingoGO')
         self.setGeometry(100, 100, 400, 300)
         
-        # Crear el layout principal
-        layout = QVBoxLayout()
+        # Crear el widget central y el layout principal
+        central_widget = QWidget()
+        layout = QVBoxLayout(central_widget)
         
         # Crear y configurar el mensaje de bienvenida
         bienvenida = QLabel("Bienvenido a una herramienta de ayuda para jugar BINGO", self)
@@ -49,7 +50,7 @@ class MainWindow(QWidget):
         btn_salir = QPushButton("Salir", self)
         btn_salir.clicked.connect(self.salir)
         
-        # Configurar el layout principa
+        # Configurar el layout principal
         layout.addWidget(bienvenida)
         layout.addWidget(opciones)
         layout.addWidget(btn_continuar_juego)
@@ -57,7 +58,9 @@ class MainWindow(QWidget):
         layout.addWidget(btn_crear_juego)
         layout.addWidget(btn_editar_ver_juegos)
         layout.addWidget(btn_salir)
-        self.setLayout(layout)
+        
+        # Establecer el widget central
+        self.setCentralWidget(central_widget)
     
     # Función para manejar el evento de "Continuar Juego"
     def continuar_juego(self):
@@ -67,19 +70,20 @@ class MainWindow(QWidget):
     def nuevo_carton_bingo(self):
         # Crear y mostrar la ventana de BingoCard
         self.bingo_card_window = BingoCard()
+        self.bingo_card_window.setWindowModality(Qt.ApplicationModal)
         self.bingo_card_window.show()
 
     # Función para manejar el evento de "Crear Juego"
     def nuevo_juego(self):
-        # Crear y mostrar la ventana de EditViewWindow
-        self.edit_card_window = NewGameWindow()
-        self.edit_card_window.show()
+        # Crear y mostrar la ventana de NewGameWindow
+        self.new_game_window = NewGameWindow()
+        self.new_game_window.show()
 
     # Función para manejar el evento de "Editar/Ver Juegos y Cartones"
     def editar_ver_juegos(self):
         # Crear y mostrar la ventana de EditViewWindow
-        self.new_game_window = EditViewWindow()
-        self.new_game_window.show()
+        self.edit_view_window = EditViewWindow()
+        self.edit_view_window.show()
 
     # Función para manejar el evento de "Salir"
     def salir(self):
@@ -91,4 +95,5 @@ main_window = MainWindow()
 main_window.show()
 
 # Ejecutar la aplicación
-sys.exit(app.exec_())
+app.exec()
+

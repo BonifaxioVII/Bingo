@@ -1,12 +1,12 @@
 import os
 import json
 from datetime import datetime
-from PyQt5.QtWidgets import (QWidget, QFrame, QScrollArea,
+from PyQt5.QtWidgets import (QWidget, QApplication, QFrame, QScrollArea,
                             QVBoxLayout, QLabel, QLineEdit, QPushButton, 
                             QListWidget, QGridLayout, QMessageBox, 
                             QHBoxLayout, QAbstractItemView, QListWidgetItem)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtGui import QFont, QPixmap, QColor
 from PIL import Image, ImageDraw, ImageFont
 
 # Configuración inicial Bingos
@@ -507,13 +507,28 @@ class NewGameWindow(QWidget):
         
         self.layout.addWidget(button_frame)
 
-    def load_bingo_list(self):                
+    def load_bingo_list(self):     
+        # Posibles cartones de bingo para jugar           
         for card_id, data in self.bingos.items():
             item_text = f"ID: {card_id} | Creación: {data['creation_time']} | Última Modificación: {data.get('last_modified', 'N/A')}"
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, card_id)
             self.bingo_list_widget.addItem(item)
     
+        # Opción de agregar nuevo bingo
+        add_bingo_item = QListWidgetItem("Agregar nuevo Bingo")
+        add_bingo_item.setForeground(QColor("blue"))
+        add_bingo_item.setData(Qt.UserRole, "add_new")
+        self.bingo_list_widget.addItem(add_bingo_item)
+        self.bingo_list_widget.itemClicked.connect(self.add_new_bingo)
+
+    def add_new_bingo(self, item):
+        if item.data(Qt.UserRole) == "add_new":
+            self.new_bingo_window = BingoCard()
+            self.new_bingo_window.show()
+            self.close()
+            self.new_bingo_window.closeEvent = self.refresh_window
+            
     def play_game(self):
         # Obtener nombre del juego
         game_name = self.game_name_input.text()
@@ -534,6 +549,8 @@ class NewGameWindow(QWidget):
         print("Cartones de Bingo Seleccionados:", selected_bingos)
         
         # Aquí implementarás la funcionalidad del juego en el futuro
-        
-        QMessageBox.information(self, "Juego Iniciado", f"El juego '{game_name}' ha comenzado con los cartones seleccionados.")
         self.close()
+
+    def refresh_window(self, event):
+        self.__init__()
+        self.show()
