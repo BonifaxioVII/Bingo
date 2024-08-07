@@ -179,13 +179,9 @@ class BingoCard(QWidget):
             return False
 
         # Leer los datos existentes para verificar duplicados ID
-        file_path = saved_carts_path
         bingos = {}
-        with open(file_path, 'r') as file:
-            try:
-                bingos = json.load(file)
-            except json.JSONDecodeError:
-                pass
+        with open(saved_carts_path, 'r') as file:
+            bingos = json.load(file)
         
         if self.card_id in bingos:
             QMessageBox.critical(self, "Error", f"El ID del cartón {self.card_id} ya ha sido usado.")
@@ -273,10 +269,7 @@ class BingoCard(QWidget):
         
         # Leer datos existentes 
         with open(file_path, 'r') as file:
-            try:
-                bingos = json.load(file)
-            except json.JSONDecodeError:
-                pass
+            bingos = json.load(file)
         
         # Añadir el nuevo bingo
         bingos[card_number] = {
@@ -289,26 +282,21 @@ class BingoCard(QWidget):
         with open(file_path, 'w') as file:
             json.dump(bingos, file, indent=4)
 
-    def load_bingo_card(self, card_id):
-        file_path = saved_carts_path
-        
-        with open(file_path, 'r') as file:
-            try:
-                bingos = json.load(file)
-                if card_id in bingos:
-                    bingo_data = bingos[card_id]["bingo_numbers"]
-                    
-                    #Establecer hora de creación
-                    self.creation_time = bingos[card_id]["creation_time"]
-                    
-                    #Establecer celdas del bingo
-                    for i, row in enumerate(bingo_data):
-                        for j, value in enumerate(row):
-                            if self.cells[i][j] is None:  # Ignorar el espacio libre en el centro
-                                continue
-                            self.cells[i][j].setText(str(value))
-            except json.JSONDecodeError:
-                QMessageBox.critical(self, "Error", "No se pudo cargar el cartón de bingo.")
+    def load_bingo_card(self, card_id):       
+        with open(saved_carts_path, 'r') as file:
+            bingos = json.load(file)
+            if card_id in bingos:
+                bingo_data = bingos[card_id]["bingo_numbers"]
+                
+                #Establecer hora de creación
+                self.creation_time = bingos[card_id]["creation_time"]
+                
+                #Establecer celdas del bingo
+                for i, row in enumerate(bingo_data):
+                    for j, value in enumerate(row):
+                        if self.cells[i][j] is None:  # Ignorar el espacio libre en el centro
+                            continue
+                        self.cells[i][j].setText(str(value))
 
 
 # Ventana de edición de contenido guardado
@@ -316,7 +304,7 @@ class EditViewWindow(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Editar/Ver Juego')
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 500, 350)
         
         # Layout principal
         self.layout = QVBoxLayout()
@@ -330,7 +318,7 @@ class EditViewWindow(QWidget):
         # Introducción
         intro_label = QLabel("Bienvenido a la sección de edición y visualización \nElija la opción que desea realizar:", self)
         intro_label.setAlignment(Qt.AlignCenter)
-        intro_label.setFont(QFont("Arial", 16))
+        intro_label.setFont(QFont("Arial", 12))
         self.layout.addWidget(intro_label)
 
         # Opción para editar/ver juego
@@ -355,7 +343,7 @@ class EditViewWindow(QWidget):
         # Crear ventana para mostrar los bingos
         self.bingo_window = QWidget()
         self.bingo_window.setWindowTitle('Editar/Ver Bingo')
-        self.bingo_window.setGeometry(150, 150, 1000, 800)
+        self.bingo_window.setGeometry(150, 150, 1500, 750)
 
         # Layout principal para la ventana de bingos
         bingo_layout = QVBoxLayout()
@@ -382,14 +370,9 @@ class EditViewWindow(QWidget):
 
     def list_bingos(self, layout):
         # Leer bingos desde el archivo
-        file_path = saved_carts_path
         bingos = {}
-        with open(file_path, 'r') as file:
-            try:
-                bingos = json.load(file)
-            except json.JSONDecodeError:
-                QMessageBox.critical(self, "Error", "No se pudo cargar los cartones de bingo.")
-                return
+        with open(saved_carts_path, 'r') as file:
+            bingos = json.load(file)
 
         for card_id, data in bingos.items():
             bingo_frame = QFrame(self.bingo_window)
@@ -413,6 +396,11 @@ class EditViewWindow(QWidget):
             edit_button.clicked.connect(lambda _, card_id=card_id: self.edit_bingo_card(card_id))
             bingo_layout.addWidget(edit_button)
 
+            # Botón para eliminar el cartón
+            delete_button = QPushButton("Eliminar", self.bingo_window)
+            delete_button.clicked.connect(lambda _, card_id=card_id: self.delete_bingo_card(card_id))
+            bingo_layout.addWidget(delete_button)
+
             layout.addWidget(bingo_frame)
 
     def edit_bingo_card(self, card_id):
@@ -422,4 +410,34 @@ class EditViewWindow(QWidget):
         self.bingo_card_window = BingoCard(card_id=card_id)
         self.bingo_card_window.show()
 
+    def delete_bingo_card(self, card_id):
+        # Confirmación de eliminación
+        reply = QMessageBox.question(self, 'Eliminar Bingo', f"¿Está seguro de que desea eliminar el cartón de bingo con ID {card_id}?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        
+        if reply == QMessageBox.No: return
 
+        # Leer y eliminar el cartón de bingo del archivo
+        file_path = saved_carts_path
+        with open(file_path, 'r') as file:
+            bingos = json.load(file)
+
+        if card_id in bingos:
+            # Eliminar la imagen asociada
+            img_path = bingos[card_id]["img_path"]
+            if img_path and os.path.exists(img_path):
+                os.remove(img_path)
+
+            # Eliminar el cartón del diccionario
+            del bingos[card_id]
+
+            # Guardar los cambios
+            with open(file_path, 'w') as file:
+                json.dump(bingos, file, indent=4)
+            
+            QMessageBox.information(self, "Eliminar Bingo", f"El cartón de bingo con ID {card_id} ha sido eliminado.")
+            
+            # Actualizar la lista de bingos
+            # Refrescar la lista de bingos
+            self.bingo_window.close()
+            self.edit_view_bingo()
