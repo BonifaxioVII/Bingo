@@ -105,6 +105,15 @@ class GameWindow(QWidget):
         for i in range(5):
             row = []
             for j in range(5):
+                if i == 2 and j == 2:  # Centro del grid
+                    button = QLabel("GO", self)
+                    button.setFixedSize(60, 60)
+                    button.setAlignment(Qt.AlignCenter)
+                    button.setStyleSheet("background-color: lightgray; font-size: 20px; font-weight: bold;")
+                    self.bingo_grid.addWidget(button, i + 1, j)
+                    row.append(None)
+                    continue
+
                 button = QPushButton("", self)
                 button.setFixedSize(60, 60)
                 button.setCheckable(True)
@@ -130,10 +139,13 @@ class GameWindow(QWidget):
         for i in range(5):
             row = []
             for j in range(5):
-                if self.bingo_buttons[i][j].isChecked():
-                    row.append(1)
-                else:
-                    row.append(0)
+                if self.bingo_buttons[i][j] is None: # Centro del grid
+                    row.append(0)  
+                    continue
+
+                if self.bingo_buttons[i][j].isChecked(): row.append(1)
+                else: row.append(0)
+
             round_data["pattern"].append(row)
         
         self.current_game['rounds'][round_number] = round_data
