@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from EstructuraBingo import BingoCard, EditViewWindow
+from EstructuraBingo import BingoCard, EditViewWindow, NewGameWindow
 
 class MainWindow(QWidget): 
     def __init__(self):
@@ -71,13 +71,15 @@ class MainWindow(QWidget):
 
     # Función para manejar el evento de "Crear Juego"
     def nuevo_juego(self):
-        QMessageBox.information(self, "Nuevo Juego", "Has seleccionado 'Crear nuevo juego'.")
-    
+        # Crear y mostrar la ventana de EditViewWindow
+        self.edit_card_window = NewGameWindow()
+        self.edit_card_window.show()
+
     # Función para manejar el evento de "Editar/Ver Juegos y Cartones"
     def editar_ver_juegos(self):
         # Crear y mostrar la ventana de EditViewWindow
-        self.edit_card_window = EditViewWindow()
-        self.edit_card_window.show()
+        self.new_game_window = EditViewWindow()
+        self.new_game_window.show()
 
     # Función para manejar el evento de "Salir"
     def salir(self):

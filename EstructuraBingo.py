@@ -1,10 +1,10 @@
 import os
 import json
 from datetime import datetime
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QFrame, QScrollArea,
+from PyQt5.QtWidgets import (QWidget, QFrame, QScrollArea,
                             QVBoxLayout, QLabel, QLineEdit, QPushButton, 
                             QListWidget, QGridLayout, QMessageBox, 
-                            QHBoxLayout, QDialog)
+                            QHBoxLayout, QAbstractItemView, QListWidgetItem)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap
 from PIL import Image, ImageDraw, ImageFont
@@ -341,6 +341,7 @@ class EditViewWindow(QWidget):
         with open(saved_carts_path, 'r') as file:
             self.bingos = json.load(file)
             
+        # Comprobar que existan bingos para mostrar
         if not self.bingos:
             QMessageBox.information(self, "Sin Bingos", "No hay bingos para mostrar.")
             return
@@ -445,3 +446,94 @@ class EditViewWindow(QWidget):
             # Refrescar la lista de bingos
             self.bingo_window.close()
             self.edit_view_bingo()
+
+# Ventana de creación de nuevo juego
+class NewGameWindow(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Nuevo Juego')
+        self.setGeometry(100, 100, 900, 700)
+        
+        # Layout principal
+        self.layout = QVBoxLayout()
+        
+        # Leer los datos existentes de bingos
+        with open(saved_carts_path, 'r') as file:
+            self.bingos = json.load(file)
+
+        # Crear widgets
+        self.create_widgets()
+
+        # Establecer el layout
+        self.setLayout(self.layout)
+
+    def create_widgets(self):
+        # Introducción
+        intro_label = QLabel("Bienvenido a la sección de creación de un nuevo juego", self)
+        intro_label.setAlignment(Qt.AlignCenter)
+        intro_label.setFont(QFont("Arial", 14))
+        self.layout.addWidget(intro_label)
+        
+        # Pedir nombre del juego
+        game_name_label = QLabel("Ingrese el nombre del juego:", self)
+        game_name_label.setFont(QFont("Arial", 12))
+        self.layout.addWidget(game_name_label)
+        
+        self.game_name_input = QLineEdit(self)
+        self.layout.addWidget(self.game_name_input)
+        
+        # Pedir selección de cartones de bingo
+        bingo_selection_label = QLabel("Seleccione los cartones de bingo que se jugarán:", self)
+        bingo_selection_label.setFont(QFont("Arial", 12))
+        self.layout.addWidget(bingo_selection_label)
+        
+        # Lista de cartones de bingo
+        self.bingo_list_widget = QListWidget(self)
+        self.bingo_list_widget.setSelectionMode(QAbstractItemView.MultiSelection)
+        self.load_bingo_list()
+        self.layout.addWidget(self.bingo_list_widget)
+        
+        # Botones de acción
+        button_frame = QWidget()
+        button_layout = QHBoxLayout(button_frame)
+        
+        play_button = QPushButton("Jugar", self)
+        play_button.clicked.connect(self.play_game)
+        button_layout.addWidget(play_button)
+        
+        cancel_button = QPushButton("Cancelar", self)
+        cancel_button.clicked.connect(self.close)
+        button_layout.addWidget(cancel_button)
+        
+        self.layout.addWidget(button_frame)
+
+    def load_bingo_list(self):                
+        for card_id, data in self.bingos.items():
+            item_text = f"ID: {card_id} | Creación: {data['creation_time']} | Última Modificación: {data.get('last_modified', 'N/A')}"
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, card_id)
+            self.bingo_list_widget.addItem(item)
+    
+    def play_game(self):
+        # Obtener nombre del juego
+        game_name = self.game_name_input.text()
+        if not game_name:
+            QMessageBox.critical(self, "Error", "Por favor, ingrese el nombre del juego.")
+            return
+        
+        # Obtener los bingos seleccionados
+        selected_items = self.bingo_list_widget.selectedItems()
+        if not selected_items:
+            QMessageBox.critical(self, "Error", "Por favor, seleccione al menos un cartón de bingo.")
+            return
+        
+        selected_bingos = [item.data(Qt.UserRole) for item in selected_items]
+        
+        # Aquí se procesarán los bingos seleccionados para el juego
+        print("Nombre del Juego:", game_name)
+        print("Cartones de Bingo Seleccionados:", selected_bingos)
+        
+        # Aquí implementarás la funcionalidad del juego en el futuro
+        
+        QMessageBox.information(self, "Juego Iniciado", f"El juego '{game_name}' ha comenzado con los cartones seleccionados.")
+        self.close()
