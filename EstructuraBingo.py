@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QFrame, QScrollArea,
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap, QColor
 from PIL import Image, ImageDraw, ImageFont
-from EstructuraJuego import GameWindow
+from EstructuraJuego import GameWindow, RoundWindow, GameProcess
 from EstructuraJuego import saved_carts_path, saved_games_path, img_cart_dir, img_game_dir
 
 
@@ -539,13 +539,13 @@ class NewGameWindow(QWidget):
             
     def check_game(self):
         # Obtener nombre del juego
-        game_name = self.game_name_input.text()
-        if not game_name:
+        self.game_name = self.game_name_input.text()
+        if not self.game_name:
             QMessageBox.critical(self, "Error", "Por favor, ingrese el nombre del juego.")
             return
         
         # Verificar si el nombre del juego ya existe
-        if game_name in self.juegos:
+        if self.game_name in self.juegos:
             QMessageBox.critical(self, "Error", "El nombre del juego ya está en uso. Por favor, elija otro nombre.")
             return
 
@@ -555,19 +555,19 @@ class NewGameWindow(QWidget):
             QMessageBox.critical(self, "Error", "Por favor, seleccione al menos un cartón de bingo.")
             return
         
-        selected_bingos = [item.data(Qt.UserRole) for item in selected_items]
+        self.selected_bingos = [item.data(Qt.UserRole) for item in selected_items]
                 
         # Guardar datos en Juegos.txt
-        self.save_game_to_file(game_name, selected_bingos)
+        self.save_game_to_file(self.game_name, self.selected_bingos)
 
         # Aquí se procesarán los bingos seleccionados para el juego
         print("... ...\nJuego creado exitosamente.")
-        print(">>> Nombre del Juego:", game_name)
-        print(">>> Cartones de Bingo Seleccionados:", selected_bingos)
+        print(">>> Nombre del Juego:", self.game_name)
+        print(">>> Cartones de Bingo Seleccionados:", self.selected_bingos)
         
         self.close()
-        self.current_game = GameWindow(game_name)
-        self.current_game.show()
+        self.game_process = GameProcess(self.game_name)
+        self.game_process.start_game()
 
     def save_game_to_file(self, game_name, selected_bingos):
         file_path = saved_games_path
