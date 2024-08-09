@@ -1,5 +1,7 @@
 from datetime import datetime
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QLabel, QPushButton, QGridLayout, QMessageBox
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, 
+                            QPushButton, QGridLayout, QMessageBox,
+                            QHBoxLayout, QComboBox, QMainWindow) 
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PIL import Image, ImageDraw, ImageFont
@@ -35,7 +37,7 @@ def conf_carts():
     return saved_carts_path, saved_games_path, img_cart_dir, img_game_dir
 saved_carts_path, saved_games_path, img_cart_dir, img_game_dir = conf_carts()
 
-from PyQt5.QtWidgets import QApplication, QMainWindow
+
 
 class GameProcess(QMainWindow):
     def __init__(self, game_name):
@@ -282,13 +284,13 @@ class GameWindow(QWidget):
         # Nombre del juego
         header_label = QLabel(f'Juego: {self.game_name}', self)
         header_label.setAlignment(Qt.AlignCenter)
-        header_label.setFont(QFont("Arial", 30))
+        header_label.setFont(QFont("Arial", 20))
         self.layout.addWidget(header_label)
 
         # Numero de la ronda
         header_label_number = QLabel(f'Ronda número: {self.round_number}', self)
         header_label_number.setAlignment(Qt.AlignCenter)
-        header_label_number.setFont(QFont("Arial", 25))
+        header_label_number.setFont(QFont("Arial", 20))
         self.layout.addWidget(header_label_number)
 
         # Duración de la ronda
@@ -302,6 +304,15 @@ class GameWindow(QWidget):
         self.round_duration_timer.timeout.connect(self.update_round_duration)
         self.round_duration_timer.start(1000)
 
+        # Instrucciones de accionar
+        self.instrucciones_acciones = QLabel("Escriba las letras y numeros que vayan dictando:", self)
+        self.instrucciones_acciones.setAlignment(Qt.AlignCenter)
+        self.instrucciones_acciones.setFont(QFont("Arial", 15))
+        self.layout.addWidget(self.instrucciones_acciones)
+
+        # Agregar acciones del juego
+        self.accions_game()
+
         # Forma de Bingo que se jugará
         self.instrucciones_image_label = QLabel("La forma del Bingo que se jugará es la siguiente:", self)
         self.instrucciones_image_label.setAlignment(Qt.AlignCenter)
@@ -313,25 +324,92 @@ class GameWindow(QWidget):
         image_label.setPixmap(QPixmap(self.grid_image_path))
         image_label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(image_label)
-
-        # Entrada para el número y letra que se está jugando
-        self.input_layout = QVBoxLayout()
-        
-        # Entrada para el número y letra que se está jugando        
-        # Agregar acciones del juego
-
+   
         # Botones de guardar y salir
-        self.save_button = QPushButton("Guardar", self)
-        self.save_button.clicked.connect(self.save_game_data)
-        self.layout.addWidget(self.save_button)
+        self.save_buttons()
+        
+    def accions_game(self):
+        # Entrada para el número y letra que se está jugando
+        self.input_layout = QHBoxLayout()
+        
+        # Desplegable de letras B, I, N, G, O
+        self.letter_dropdown = QComboBox(self)
+        self.letter_dropdown.addItems(['B', 'I', 'N', 'G', 'O'])
+        self.letter_dropdown.setFont(QFont("Arial", 20))
+        self.letter_dropdown.setMaximumWidth(150)
+        self.input_layout.addWidget(self.letter_dropdown)
 
+        # Espacio para ingresar un número
+        self.number_input = QLineEdit(self)
+        self.number_input.setPlaceholderText("Ingrese el número")
+        self.number_input.setFont(QFont("Arial", 20))
+        self.number_input.setMaximumWidth(500)
+        self.input_layout.addWidget(self.number_input)
+
+        self.input_layout.setAlignment(Qt.AlignCenter)
+        self.layout.addLayout(self.input_layout)
+
+    def save_buttons(self):
+        # Botón "Jugar"
+        self.play_button = QPushButton("Jugar", self)
+        self.play_button.clicked.connect(self.check_bingo_card)
+        self.layout.addWidget(self.play_button)
+
+        # Botón "Salir"
         self.exit_button = QPushButton("Salir", self)
         self.exit_button.clicked.connect(self.close)
         self.layout.addWidget(self.exit_button)
-        
+
     def update_round_duration(self):
         elapsed_time = datetime.now() - self.round_start_time
         self.duration_label.setText(f"Duración: {str(elapsed_time).split('.')[0]}")
+
+    def check_bingo_card(self):
+        letter = self.letter_combo.currentText()
+        number_input = self.number_input.text().strip()
+
+        # Validar que el número no esté vacío
+        if not number_input:
+            QMessageBox.critical(self, "Error", "El campo del número no puede estar vacío.")
+            return
+
+        # Validar que el número ingresado sea un número entero
+        try: number = int(number_input)
+        except ValueError:
+            QMessageBox.critical(self, "Error", "Por favor, ingrese un número válido.")
+            return
+
+        # Validar que el número esté en el rango permitido (1-80)
+        if number < 1 or number > 80:
+            QMessageBox.critical(self, "Error", "Por favor, ingrese un número entre 1 y 80.")
+            return
+
+        # Confirmar la casilla antes de jugar
+        confirmation = QMessageBox.question(self, "Confirmar casilla",
+                                            f"¿Se juega la casilla {letter}{number}?",
+                                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if confirmation == QMessageBox.No:
+            return
+
+        # Determinar la columna en función de la letra
+        column_index = {"B": 0, "I": 1, "N": 2, "G": 3, "O": 4}[letter]
+        match_found = False
+
+        # Buscar la coincidencia en los cartones de bingo
+        for card in self.bingo_cards:
+            if card[column_index].count(number) > 0:
+                match_found = True
+                break
+
+        # Notificar si se encontró o no una coincidencia
+        if match_found:
+            QMessageBox.information(self, "¡Coincidencia!", f"El número {letter}{number} está en uno de los cartones.")
+        else:
+            QMessageBox.information(self, "Sin coincidencia", f"El número {letter}{number} no está en ninguno de los cartones.")
+
+        # Limpiar el campo de entrada después de la jugada
+        self.number_input.clear()
 
     def save_game_data(self):
         # Guardar los datos de la ronda en el archivo Juegos.txt
