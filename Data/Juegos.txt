@@ -1,16 +1,1 @@
-{
-    "a1": {
-        "bingos": [
-            "a123"
-        ],
-        "rounds": {
-            "1": {
-                "creation_time": "2024-08-08 19:15:51.473990",
-                "modification_time": null,
-                "grid_image": "Data\\ImgGames\\a1\\Round_1.png"
-            }
-        },
-        "creation_time": "2024-08-08 19:15:48",
-        "modification_time": "2024-08-08 19:15:51.473990"
-    }
-}
+{}

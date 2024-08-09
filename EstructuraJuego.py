@@ -39,7 +39,7 @@ class RoundWindow(QWidget):
     def __init__(self, game_name, round_number, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f'Juego: {game_name} - Ronda {round_number}')
-        self.setGeometry(100, 100, 900, 700)
+        self.showFullScreen()
         self.game_name = game_name
         self.round_number = round_number
         self.parent_window = parent

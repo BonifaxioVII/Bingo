@@ -25,6 +25,7 @@ class BingoCard(QWidget):
 
         # Configurar la ventana secundaria
         self.setWindowTitle('Digitalización del Cartón de Bingo')
+        self.showFullScreen()
         
         # Layout principal
         self.layout = QVBoxLayout()
@@ -40,18 +41,24 @@ class BingoCard(QWidget):
             self.load_bingo_card(self.new_card_id)
     
     def create_widgets(self):
+        # Nombre de la app
+        app_name = QLabel("BingoGO", self)
+        app_name.setAlignment(Qt.AlignCenter)
+        app_name.setFont(QFont("Arial", 50))
+        self.layout.addWidget(app_name)
+
         # Etiqueta de bienvenida y entrada para el número del cartón de bingo de acuerdo con el historial del cartón
         if not self.new_card_id:
             bienvenida = QLabel("Crear BINGO\nInserte el código del cartón de bingo:", self)
         else:
             bienvenida = QLabel("Editar BINGO\nCodigo del cartón:", self)
         bienvenida.setAlignment(Qt.AlignCenter)
-        bienvenida.setFont(QFont("Arial", 12))
+        bienvenida.setFont(QFont("Arial", 25))
         self.layout.addWidget(bienvenida)
         
         #Espacil con el ID del bingo
         self.id_card_space = QLineEdit(self)
-        self.id_card_space.setFixedWidth(250)
+        self.id_card_space.setFixedWidth(500)
         self.id_card_space.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.id_card_space)
         
@@ -64,7 +71,7 @@ class BingoCard(QWidget):
         # Texto explicativo
         instructions = QLabel("\nRellene la plantilla de a continuación de acuerdo con su cartón físico.", self)
         instructions.setAlignment(Qt.AlignCenter)
-        instructions.setFont(QFont("Arial", 12))
+        instructions.setFont(QFont("Arial", 25))
         self.layout.addWidget(instructions)
 
         #Crear grid
@@ -286,7 +293,7 @@ class EditViewWindow(QWidget):
         super().__init__(parent)
 
         self.setWindowTitle('Editar/Ver Juego')
-        self.setGeometry(100, 100, 500, 350)
+        self.showFullScreen()
         
         # Layout principal
         self.layout = QVBoxLayout()
@@ -297,10 +304,16 @@ class EditViewWindow(QWidget):
         self.setLayout(self.layout)
 
     def create_options(self):
+        # Nombre de la app
+        app_name = QLabel("BingoGO", self)
+        app_name.setAlignment(Qt.AlignCenter)
+        app_name.setFont(QFont("Arial", 50))
+        self.layout.addWidget(app_name)
+
         # Introducción
-        intro_label = QLabel("Bienvenido a la sección de edición y visualización \nElija la opción que desea realizar:", self)
+        intro_label = QLabel("Edición y visualización. \nElija la opción que desea realizar:", self)
         intro_label.setAlignment(Qt.AlignCenter)
-        intro_label.setFont(QFont("Arial", 12))
+        intro_label.setFont(QFont("Arial", 25))
         self.layout.addWidget(intro_label)
 
         # Opción para editar/ver juego
@@ -334,7 +347,7 @@ class EditViewWindow(QWidget):
         # Crear ventana para mostrar los bingos
         self.bingo_window = QWidget()
         self.bingo_window.setWindowTitle('Editar/Ver Bingo')
-        self.bingo_window.setGeometry(150, 150, 1500, 750)
+        self.bingo_window.showFullScreen()
 
         # Layout principal para la ventana de bingos
         bingo_layout = QVBoxLayout()
@@ -437,7 +450,7 @@ class NewGameWindow(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Nuevo Juego')
-        self.setGeometry(100, 100, 900, 700)
+        self.showFullScreen()
         
         # Layout principal
         self.layout = QVBoxLayout()
@@ -457,15 +470,21 @@ class NewGameWindow(QWidget):
         self.setLayout(self.layout)
 
     def create_widgets(self):
+        # Nombre de la app
+        app_name = QLabel("BingoGO", self)
+        app_name.setAlignment(Qt.AlignCenter)
+        app_name.setFont(QFont("Arial", 50))
+        self.layout.addWidget(app_name)
+
         # Introducción
-        intro_label = QLabel("Bienvenido a la sección de creación de un nuevo juego", self)
+        intro_label = QLabel("Creación de un nuevo juego", self)
         intro_label.setAlignment(Qt.AlignCenter)
-        intro_label.setFont(QFont("Arial", 14))
+        intro_label.setFont(QFont("Arial", 30))
         self.layout.addWidget(intro_label)
         
         # Pedir nombre del juego
         game_name_label = QLabel("Ingrese el nombre del juego:", self)
-        game_name_label.setFont(QFont("Arial", 12))
+        game_name_label.setFont(QFont("Arial", 20))
         self.layout.addWidget(game_name_label)
         
         self.game_name_input = QLineEdit(self)
@@ -473,7 +492,7 @@ class NewGameWindow(QWidget):
         
         # Pedir selección de cartones de bingo
         bingo_selection_label = QLabel("Seleccione los cartones de bingo que se jugarán:", self)
-        bingo_selection_label.setFont(QFont("Arial", 12))
+        bingo_selection_label.setFont(QFont("Arial", 20))
         self.layout.addWidget(bingo_selection_label)
         
         # Lista de cartones de bingo

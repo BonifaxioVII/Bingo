@@ -11,24 +11,30 @@ class MainWindow(QMainWindow):
         # Inicializar la interfaz de usuario
         self.initUI()
     
+    # Organización de Widgets
     def initUI(self):
         # Configurar el título de la ventana
         self.setWindowTitle('BingoGO')
-        self.setGeometry(100, 100, 400, 300)
+        self.showFullScreen()
         
         # Crear el widget central y el layout principal
         central_widget = QWidget()
         layout = QVBoxLayout(central_widget)
         
+        # Nombre de la app
+        app_name = QLabel("BingoGO", self)
+        app_name.setAlignment(Qt.AlignCenter)
+        app_name.setFont(QFont("Arial", 100))
+
         # Crear y configurar el mensaje de bienvenida
-        bienvenida = QLabel("Bienvenido a una herramienta de ayuda para jugar BINGO", self)
+        bienvenida = QLabel("Creado por DanBuiv", self)
         bienvenida.setAlignment(Qt.AlignCenter)
-        bienvenida.setFont(QFont("Arial", 14))
+        bienvenida.setFont(QFont("Arial", 15))
         
         # Crear y configurar el mensaje de opciones
         opciones = QLabel("Elige una de las siguientes opciones:", self)
         opciones.setAlignment(Qt.AlignCenter)
-        opciones.setFont(QFont("Arial", 12))
+        opciones.setFont(QFont("Arial", 25))
         
         # Botón para Continuar Juego
         btn_continuar_juego = QPushButton("Continuar Juego", self)
@@ -51,6 +57,7 @@ class MainWindow(QMainWindow):
         btn_salir.clicked.connect(self.salir)
         
         # Configurar el layout principal
+        layout.addWidget(app_name)
         layout.addWidget(bienvenida)
         layout.addWidget(opciones)
         layout.addWidget(btn_continuar_juego)
