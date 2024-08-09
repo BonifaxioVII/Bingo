@@ -190,15 +190,14 @@ class BingoCard(QWidget):
                 if cell is None:
                     row_numbers.append("GO")
                     continue
-
                 value = cell.text()
                 if not value.isdigit():
                     QMessageBox.critical(self, "Error", "Todas las casillas deben estar llenas con números válidos.")
                     return False
-                if int(value) > 80:
-                    QMessageBox.critical(self, "Error", "Los números deben ser menores o iguales a 80.")
+                elif int(value) > 80 or int(value) < 1:
+                    QMessageBox.critical(self, "Error", "Los números deben ser entre 1 y 80.")
                     return False
-                if int(value) in numbers_set:
+                elif int(value) in numbers_set:
                     QMessageBox.critical(self, "Error", "No se pueden repetir números en diferentes casillas.")
                     return False
                 

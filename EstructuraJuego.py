@@ -1,8 +1,8 @@
 from datetime import datetime
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, 
                             QPushButton, QGridLayout, QMessageBox,
-                            QHBoxLayout, QComboBox, QMainWindow) 
-from PyQt5.QtGui import QFont, QPixmap
+                            QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea) 
+from PyQt5.QtGui import QImage, QFont, QPixmap, QPainter, QColor
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PIL import Image, ImageDraw, ImageFont
 import json
@@ -70,6 +70,55 @@ class GameProcess(QMainWindow):
         self.current_window = self.game_window
         self.game_window.round_completed.connect(self.start_new_round)
         self.game_window.show()
+
+class BingoVisualizer(QWidget):
+    def __init__(self, bingo_id, bingo_numbers, yellow_highlights=None, red_highlights=None, parent=None):
+        super().__init__(parent)
+        self.bingo_id = bingo_id
+        self.bingo_numbers = bingo_numbers
+        self.yellow_highlights = yellow_highlights if yellow_highlights else []
+        self.red_highlights = red_highlights if red_highlights else []
+
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle(f'Bingo ID: {self.bingo_id}')
+        self.setGeometry(100, 100, 500, 500)
+
+        layout = QGridLayout(self)
+
+        # Crear encabezados de BINGO
+        headers = ['B', 'I', 'N', 'G', 'O']
+        for col, header in enumerate(headers):
+            header_label = QLabel(header, self)
+            header_label.setAlignment(Qt.AlignCenter)
+            header_label.setFont(QFont("Arial", 14, QFont.Bold))
+            layout.addWidget(header_label, 0, col)
+
+        # Crear la cuadrícula de bingo
+        for row, row_values in enumerate(self.bingo_numbers):
+            for col, number in enumerate(row_values):
+                # Manejar el valor central que debe ser "GO"
+                if row == 2 and col == 2:
+                    label = QLabel("GO", self)
+                    label.setAlignment(Qt.AlignCenter)
+                    label.setFont(QFont("Arial", 14, QFont.Bold))
+                    label.setStyleSheet("background-color: lightgray;")  # Color especial para la casilla central
+                    continue
+
+                label = QLabel(str(number), self)
+                label.setAlignment(Qt.AlignCenter)
+                label.setFont(QFont("Arial", 12))
+
+                # Resaltar la casilla según el tipo de resaltado
+                if (row, col) in self.yellow_highlights:
+                    label.setStyleSheet("background-color: yellow;")
+                elif (row, col) in self.red_highlights:
+                    label.setStyleSheet("background-color: red;")
+
+                layout.addWidget(label, row + 1, col)  # +1 para dejar espacio para el encabezado
+
+        self.setLayout(layout)
 
 class RoundWindow(QWidget):
     figure_make = pyqtSignal()
@@ -217,7 +266,6 @@ class RoundWindow(QWidget):
         os.makedirs(os.path.dirname(img_save_path), exist_ok=True)
         img.save(img_save_path)
 
-        self.grid_shape = [[button.isChecked() if button else False for button in row] for row in self.bingo_buttons]        
         self.grid_image_path = img_save_path
 
     def save_round_data(self):
@@ -228,10 +276,14 @@ class RoundWindow(QWidget):
         game_data = games_data[self.game_name]
         rounds = game_data["rounds"]
         
+        # Crear la matriz de la figura con 0s y 1s
+        grid_matrix = [[1 if button and button.isChecked() else 0 for button in row] for row in self.bingo_buttons]
+
         round_data = {
             'creation_time': str(datetime.now()),
             'modification_time': None,
             'grid_image': self.grid_image_path,
+            'grid_matrix': grid_matrix,
             'actions':[]}
 
         rounds[self.round_number] = round_data
@@ -245,15 +297,33 @@ class RoundWindow(QWidget):
 class GameWindow(QWidget):
     round_completed = pyqtSignal()
     def __init__(self, game_name, parent=None):
+        # Establecer ScrollBar
         super().__init__(parent)
         self.setWindowTitle('BingoGo')
         self.showFullScreen()
         self.game_name = game_name
 
         self.load_round_data()
-        self.layout = QVBoxLayout()
+        self.load_bingos_data()
+
+        # Crear un layout principal
+        self.main_layout = QVBoxLayout(self)
+        self.setLayout(self.main_layout)
+
+        # Crear un área de scroll
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+
+        # Crear un widget de contenedor para el scroll area
+        self.scroll_widget = QWidget()
+        self.scroll_area.setWidget(self.scroll_widget)
+
+        # Crear el layout que contendrá todos los widgets de la ventana
+        self.layout = QVBoxLayout(self.scroll_widget)
         
-        self.setLayout(self.layout)
+        # Agregar el scroll area al layout principal
+        self.main_layout.addWidget(self.scroll_area)
+        
         self.create_widgets()
           
     def load_round_data(self):
@@ -261,17 +331,22 @@ class GameWindow(QWidget):
         with open(saved_games_path, 'r') as file:
             self.games = json.load(file)
 
-        #Actualizar detalles del juego
-        current_game = self.games[self.game_name]
-        self.bingos = current_game["bingos"]
-        self.rounds = current_game["rounds"]
-        self.round_number = str(len(self.rounds)) 
-        self.creation_time = current_game["creation_time"]
-        self.modification_time = current_game["modification_time"]
-
-        # Cargar los datos de la ronda (grid, imagen, etc.)
+        #Diccionarios base
+        self.current_game = self.games[self.game_name]
+        self.round_number = str(len(self.current_game['rounds']))   
+        self.current_round = self.current_game['rounds'][self.round_number]
         self.round_start_time = datetime.now()
-        self.grid_image_path = f'Data/ImgGames/{self.game_name}/Round_{self.round_number}.png'
+
+    def load_bingos_data(self):
+        self.bingos_carts = {}
+
+        # Leer los datos existentes de los bingos
+        with open(saved_carts_path, 'r') as file:
+            bingos = json.load(file)
+
+        for key, values in bingos.items():
+            if key in self.current_game["bingos"]:
+                self.bingos_carts[key] = values["bingo_numbers"]
 
     def create_widgets(self):
         # Nombre de la app
@@ -320,13 +395,16 @@ class GameWindow(QWidget):
 
         # Imagen de la figura a jugar
         image_label = QLabel(self)
-        image_label.setPixmap(QPixmap(self.grid_image_path))
+        image_label.setPixmap(QPixmap(self.current_round['grid_image']))
         image_label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(image_label)
    
         # Botones de guardar y salir
         self.save_buttons()
-        
+
+        # Grupo de visualización de cartones de Bingo
+        self.create_bingo_visualization()
+ 
     def actions_game(self):
         # Entrada para el número y letra que se está jugando
         self.input_layout = QHBoxLayout()
@@ -359,6 +437,26 @@ class GameWindow(QWidget):
         self.exit_button.clicked.connect(self.close)
         self.layout.addWidget(self.exit_button)
 
+    def create_bingo_visualization(self):
+        self.bingo_group_box = QGroupBox("Visualización de Bingos")
+        self.bingo_layout = QVBoxLayout()
+
+        # Crear un widget de visualización por cada cartón de Bingo
+        self.bingo_widgets = {}
+        for bingo_name in self.bingos_carts.keys():
+            label = QLabel(f"Bingo: {bingo_name}")
+            label.setFont(QFont("Arial", 15))
+            self.bingo_layout.addWidget(label)
+
+            bingo_view = QLabel(self)
+            bingo_view.setAlignment(Qt.AlignCenter)
+            self.bingo_layout.addWidget(bingo_view)
+
+            self.bingo_widgets[bingo_name] = bingo_view
+
+        self.bingo_group_box.setLayout(self.bingo_layout)
+        self.layout.addWidget(self.bingo_group_box)
+
     def update_round_duration(self):
         elapsed_time = datetime.now() - self.round_start_time
         self.duration_label.setText(f"Duración: {str(elapsed_time).split('.')[0]}")
@@ -385,14 +483,8 @@ class GameWindow(QWidget):
         # Formatear la acción actual
         self.current_action = f"{letter}{number_input}"
 
-        # Cargar los datos del juego desde el archivo
-        with open(saved_games_path, 'r') as file:
-            games_data = json.load(file)
-
-        actions = games_data[self.game_name]['rounds'][self.round_number]['actions']
-
         # Verificar si la acción ya está en la lista de acciones
-        if self.current_action in actions:
+        if self.current_action in self.current_round['actions']:
             QMessageBox.critical(self, "Acción repetida", f"La casilla {self.current_action} ya ha sido jugada en esta ronda.")
             return
 
@@ -405,38 +497,99 @@ class GameWindow(QWidget):
             return
         
         self.save_game_data()
+        self.process_bingo()
 
-    def save_game_data(self):
-        # Guardar los datos de la ronda en el archivo Juegos.txt
-        with open(saved_games_path, 'r') as file:
-            games_data = json.load(file)
+    def process_bingo(self):
+        for bingo_name, bingo_numbers in self.bingos_carts.items():
+            red_highlight, yellow_highlight = self.process_bingo_actions(bingo_numbers, 
+                                                                         self.current_round["grid_matrix"], 
+                                                                         self.current_round["actions"])
         
-        game_data = games_data[self.game_name]
-        rounds = game_data["rounds"]
-        data_round = rounds[self.round_number]
-        actions = data_round['actions']
+            # Actualizar la visualización del cartón de Bingo
+            self.update_bingo_visualization(bingo_name, bingo_numbers, red_highlight, yellow_highlight)
 
-        #Actualizar accion        
-        actions.append(self.current_action)
+    def process_bingo_actions(self, bingo_numbers, grid_matrix, actions):       
+        # Diccionario para asociar las letras con los índices de las columnas
+        column_mapping = {'B': 0, 'I': 1, 'N': 2, 'G': 3, 'O': 4}
 
-        #Actualizar ronda        
-        round_data = {
-            'creation_time': data_round['creation_time'],
-            'modification_time': str(datetime.now()),
-            'grid_image': data_round['grid_image'],
-            'actions': actions}        
-        rounds[self.round_number] = round_data
+        # Listas para guardar las acciones resaltadas
+        red_highlight = []
+        yellow_highlight = []
 
-        # Actualizar diccionario de rondas
-        game_data['rounds'] = rounds
+        for action in actions:
+            letter = action[0]  # Primera parte de la acción (B, I, N, G, O)
+            number = int(action[1:])  # Parte numérica de la acción
 
-        # Actualizar diccionario del juego
-        game_data['modification_time'] = str(datetime.now())
-        games_data[self.game_name] = game_data
+            # Determinar el índice de la columna con base en la letra
+            column_index = column_mapping[letter]
+
+            # Buscar el número en la columna correspondiente
+            for row_index in range(len(bingo_numbers)):
+                if bingo_numbers[row_index][column_index] == number:
+                    # Verificar si la casilla está marcada en grid_matrix
+                    if grid_matrix[row_index][column_index] == 1:
+                        red_highlight.append(action)
+                    else:
+                        yellow_highlight.append(action)
+                    break  # Salir del bucle una vez se ha encontrado la acción
+
+        return red_highlight, yellow_highlight
+
+    def update_bingo_visualization(self, bingo_name, bingo_numbers, red_highlight, yellow_highlight):
+        # Crear una imagen del cartón de Bingo
+        img = QImage(300, 360, QImage.Format_RGB32)
+        img.fill(Qt.white)
+
+        painter = QPainter(img)
+        cell_size = 60
+        font = QFont("Arial", 10)
+        painter.setFont(font)
+
+        #Encabezados
+        headers = ['B', 'I', 'N', 'G', 'O']
+        for i, header in enumerate(headers):
+            x0 = i * cell_size
+            y0 = 0
+            painter.drawText(x0 + cell_size // 2 - 10, y0 + 30, header)
+
+        #Grid
+        for i in range(5):
+            for j in range(5):
+                x0 = j * cell_size
+                y0 = (i + 1) * cell_size
+
+                action = f"{headers[j]}{bingo_numbers[i][j]}"
+                if action in red_highlight:
+                    color = QColor('red')
+                elif action in yellow_highlight:
+                    color = QColor('yellow')
+                else:
+                    color = QColor('white')
+
+                painter.fillRect(x0, y0, cell_size, cell_size, color)
+                painter.drawRect(x0, y0, cell_size, cell_size)
+                painter.drawText(x0 + 20, y0 + 35, str(bingo_numbers[i][j]))
+
+        painter.end()
+        
+        pixmap = QPixmap.fromImage(img)
+        self.bingo_widgets[bingo_name].setPixmap(pixmap)    
+    
+    def save_game_data(self):
+        #Actualizar ronda 
+        self.current_round["modification_time"] = str(datetime.now())        
+        self.current_round['actions'].append(self.current_action)
+
+        # Actualiza del juego
+        self.current_game['rounds'][self.round_number] = self.current_round
+        self.current_game['modification_time'] = str(datetime.now())
+        
+        # Actualización general
+        self.games[self.game_name] = self.current_game  
 
         with open(saved_games_path, 'w') as file:
-            json.dump(games_data, file, indent=4)
-
+            json.dump(self.games, file, indent=4)
+  
     def closeEvent(self, event):
         # Confirmar salida
         reply = QMessageBox.question(self, 'Salir', '¿Estás seguro de que quieres salir?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
