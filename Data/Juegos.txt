@@ -1,103 +1,16 @@
 {
-    "A1": {
+    "a1": {
         "bingos": [
-            "A1123"
+            "a123"
         ],
         "rounds": {
             "1": {
-                "pattern": [
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ],
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ],
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ],
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ],
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ]
-                ],
-                "creation_time": "2024-08-07 18:08:54",
-                "modification_time": null
+                "creation_time": "2024-08-08 19:15:51.473990",
+                "modification_time": null,
+                "grid_image": "Data\\ImgGames\\a1\\Round_1.png"
             }
         },
-        "creation_time": "2024-08-07 18:08:51",
-        "modification_time": "2024-08-07 18:08:54"
-    },
-    "b1": {
-        "bingos": [
-            "B1241",
-            "A1123"
-        ],
-        "rounds": {
-            "1": {
-                "pattern": [
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ],
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ],
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ],
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ],
-                    [
-                        1,
-                        0,
-                        0,
-                        0,
-                        0
-                    ]
-                ],
-                "creation_time": "2024-08-07 18:12:40",
-                "modification_time": null
-            }
-        },
-        "creation_time": "2024-08-07 18:12:36",
-        "modification_time": "2024-08-07 18:12:40"
+        "creation_time": "2024-08-08 19:15:48",
+        "modification_time": "2024-08-08 19:15:51.473990"
     }
 }

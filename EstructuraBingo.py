@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap, QColor
 from PIL import Image, ImageDraw, ImageFont
 from EstructuraJuego import GameWindow
-from EstructuraJuego import saved_carts_path, saved_games_path, img_cart_dir
+from EstructuraJuego import saved_carts_path, saved_games_path, img_cart_dir, img_game_dir
 
 
 # Interfaz del cartón de Bingo
@@ -549,10 +549,6 @@ class NewGameWindow(QWidget):
         self.close()
         self.current_game = GameWindow(game_name)
         self.current_game.show()
-
-    def play_game(self):
-        # Aquí implementarás la funcionalidad del juego en el futuro
-        self.close()
 
     def save_game_to_file(self, game_name, selected_bingos):
         file_path = saved_games_path
