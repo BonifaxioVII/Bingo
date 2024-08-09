@@ -37,8 +37,6 @@ def conf_carts():
     return saved_carts_path, saved_games_path, img_cart_dir, img_game_dir
 saved_carts_path, saved_games_path, img_cart_dir, img_game_dir = conf_carts()
 
-
-
 class GameProcess(QMainWindow):
     def __init__(self, game_name):
         super().__init__()
@@ -233,7 +231,8 @@ class RoundWindow(QWidget):
         round_data = {
             'creation_time': str(datetime.now()),
             'modification_time': None,
-            'grid_image': self.grid_image_path}
+            'grid_image': self.grid_image_path,
+            'actions':[]}
 
         rounds[self.round_number] = round_data
         game_data['rounds'] = rounds
@@ -266,7 +265,7 @@ class GameWindow(QWidget):
         current_game = self.games[self.game_name]
         self.bingos = current_game["bingos"]
         self.rounds = current_game["rounds"]
-        self.round_number = len(self.rounds) 
+        self.round_number = str(len(self.rounds)) 
         self.creation_time = current_game["creation_time"]
         self.modification_time = current_game["modification_time"]
 
@@ -311,7 +310,7 @@ class GameWindow(QWidget):
         self.layout.addWidget(self.instrucciones_acciones)
 
         # Agregar acciones del juego
-        self.accions_game()
+        self.actions_game()
 
         # Forma de Bingo que se jugará
         self.instrucciones_image_label = QLabel("La forma del Bingo que se jugará es la siguiente:", self)
@@ -328,7 +327,7 @@ class GameWindow(QWidget):
         # Botones de guardar y salir
         self.save_buttons()
         
-    def accions_game(self):
+    def actions_game(self):
         # Entrada para el número y letra que se está jugando
         self.input_layout = QHBoxLayout()
         
@@ -365,9 +364,8 @@ class GameWindow(QWidget):
         self.duration_label.setText(f"Duración: {str(elapsed_time).split('.')[0]}")
 
     def check_bingo_card(self):
-        letter = self.letter_combo.currentText()
+        letter = self.letter_dropdown.currentText()
         number_input = self.number_input.text().strip()
-
         # Validar que el número no esté vacío
         if not number_input:
             QMessageBox.critical(self, "Error", "El campo del número no puede estar vacío.")
@@ -384,6 +382,20 @@ class GameWindow(QWidget):
             QMessageBox.critical(self, "Error", "Por favor, ingrese un número entre 1 y 80.")
             return
 
+        # Formatear la acción actual
+        self.current_action = f"{letter}{number_input}"
+
+        # Cargar los datos del juego desde el archivo
+        with open(saved_games_path, 'r') as file:
+            games_data = json.load(file)
+
+        actions = games_data[self.game_name]['rounds'][self.round_number]['actions']
+
+        # Verificar si la acción ya está en la lista de acciones
+        if self.current_action in actions:
+            QMessageBox.critical(self, "Acción repetida", f"La casilla {self.current_action} ya ha sido jugada en esta ronda.")
+            return
+
         # Confirmar la casilla antes de jugar
         confirmation = QMessageBox.question(self, "Confirmar casilla",
                                             f"¿Se juega la casilla {letter}{number}?",
@@ -391,25 +403,8 @@ class GameWindow(QWidget):
 
         if confirmation == QMessageBox.No:
             return
-
-        # Determinar la columna en función de la letra
-        column_index = {"B": 0, "I": 1, "N": 2, "G": 3, "O": 4}[letter]
-        match_found = False
-
-        # Buscar la coincidencia en los cartones de bingo
-        for card in self.bingo_cards:
-            if card[column_index].count(number) > 0:
-                match_found = True
-                break
-
-        # Notificar si se encontró o no una coincidencia
-        if match_found:
-            QMessageBox.information(self, "¡Coincidencia!", f"El número {letter}{number} está en uno de los cartones.")
-        else:
-            QMessageBox.information(self, "Sin coincidencia", f"El número {letter}{number} no está en ninguno de los cartones.")
-
-        # Limpiar el campo de entrada después de la jugada
-        self.number_input.clear()
+        
+        self.save_game_data()
 
     def save_game_data(self):
         # Guardar los datos de la ronda en el archivo Juegos.txt
@@ -418,21 +413,29 @@ class GameWindow(QWidget):
         
         game_data = games_data[self.game_name]
         rounds = game_data["rounds"]
+        data_round = rounds[self.round_number]
+        actions = data_round['actions']
+
+        #Actualizar accion        
+        actions.append(self.current_action)
+
+        #Actualizar ronda        
         round_data = {
-            'creation_time': str(self.round_start_time),
-            'modification_time': None,
-            'grid_image': self.grid_image_path}
-        
+            'creation_time': data_round['creation_time'],
+            'modification_time': str(datetime.now()),
+            'grid_image': data_round['grid_image'],
+            'actions': actions}        
         rounds[self.round_number] = round_data
+
+        # Actualizar diccionario de rondas
         game_data['rounds'] = rounds
+
+        # Actualizar diccionario del juego
         game_data['modification_time'] = str(datetime.now())
         games_data[self.game_name] = game_data
 
         with open(saved_games_path, 'w') as file:
             json.dump(games_data, file, indent=4)
-
-        QMessageBox.information(self, "Guardado", "La ronda ha sido guardada exitosamente.")
-        self.close()
 
     def closeEvent(self, event):
         # Confirmar salida
