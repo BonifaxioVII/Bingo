@@ -448,8 +448,16 @@ class GameWindow(QWidget):
         self.last_action_label = QLabel("Última acción: N/A")
         self.statistics_layout.addWidget(self.last_action_label)
 
+        # Estado de la acción inmediatamente anterior
+        self.previous_action_status_red = QLabel("Efectiva para: N/A")
+        self.statistics_layout.addWidget(self.previous_action_status_red)
+        self.previous_action_status_yellow = QLabel("Efectiva parcialmente para: N/A")
+        self.statistics_layout.addWidget(self.previous_action_status_yellow)
+        self.previous_action_status_NA = QLabel("No efectiva para: N/A")
+        self.statistics_layout.addWidget(self.previous_action_status_NA)
+
         # Contador de jugadas realizadas
-        self.actions_count_label = QLabel("Total de jugadas: 0")
+        self.actions_count_label = QLabel("\nTotal de jugadas: 0")
         self.statistics_layout.addWidget(self.actions_count_label)
 
         self.statistics_group_box.setLayout(self.statistics_layout)
@@ -499,16 +507,28 @@ class GameWindow(QWidget):
         self.update_statistics()
 
     def process_bingo(self):
+        # Iterado por cada uno de los bingos
         for bingo_name, data in self.bingos_carts.items():
             bingo_numbers = data['numbers']
-            red_highlight, yellow_highlight = self.check_bingo_actions(bingo_name, bingo_numbers, 
+
+            red_highlight, yellow_highlight = [], []
+            # Iterado por cada una de las acciones
+            for action in self.current_round['actions']:
+                red_current_action, yellow_current_action = self.check_bingo_actions(bingo_name, bingo_numbers, 
                                                                         self.current_round["grid_matrix"], 
-                                                                        self.current_round["actions"])
+                                                                        action)
         
+                # Listas para guardar el historial de cambios de la acción actual
+                if action == self.current_action:
+                    self.update_action_status(bingo_name, red_current_action, yellow_current_action)
+                
+                red_highlight.extend(red_current_action)
+                yellow_highlight.extend(yellow_current_action)
+
             # Actualizar la visualización del cartón de Bingo
             self.update_bingo_visualization(bingo_name, bingo_numbers, red_highlight, yellow_highlight)
 
-    def check_bingo_actions(self, bingo_name, bingo_numbers, grid_matrix, actions):       
+    def check_bingo_actions(self, bingo_name, bingo_numbers, grid_matrix, action):       
         # Diccionario para asociar las letras con los índices de las columnas
         column_mapping = {'B': 0, 'I': 1, 'N': 2, 'G': 3, 'O': 4}
 
@@ -516,27 +536,27 @@ class GameWindow(QWidget):
         red_highlight = []
         yellow_highlight = []
 
-        for action in actions:
-            letter = action[0]  # Primera parte de la acción (B, I, N, G, O)
-            number = int(action[1:])  # Parte numérica de la acción
+        letter = action[0]  # Primera parte de la acción (B, I, N, G, O)
+        number = int(action[1:])  # Parte numérica de la acción
 
-            # Determinar el índice de la columna con base en la letra
-            column_index = column_mapping[letter]
+        # Determinar el índice de la columna con base en la letra
+        column_index = column_mapping[letter]
 
-            # Buscar el número en la columna correspondiente
-            for row_index in range(len(bingo_numbers)):
-                if bingo_numbers[row_index][column_index] == number:
-                    # Verificar si la casilla está marcada en grid_matrix
-                    if grid_matrix[row_index][column_index] == 1:
-                        red_highlight.append(action)
-                        self.bingos_carts[bingo_name]['boxes_to_fill'] -= 1
+        # Buscar el número en la columna correspondiente
+        for row_index in range(len(bingo_numbers)):
+            if bingo_numbers[row_index][column_index] == number:
+                #Casillas de efectividad completa
+                if grid_matrix[row_index][column_index] == 1:
+                    red_highlight.append(action)
+                    self.bingos_carts[bingo_name]['boxes_to_fill'] -= 1
 
-                    else:
-                        yellow_highlight.append(action)
-                        
-                    remaining_cells = self.bingos_carts[bingo_name]['boxes_to_fill']
-                    self.bingo_widgets[bingo_name + "_missing"].setText(f"Casillas restantes para completar el Bingo: {remaining_cells}")
-                    break  # Salir del bucle una vez se ha encontrado la acción
+                #Casillas de efectividad parcial
+                else:
+                    yellow_highlight.append(action)
+                    
+                remaining_cells = self.bingos_carts[bingo_name]['boxes_to_fill']
+                self.bingo_widgets[bingo_name + "_missing"].setText(f"Casillas restantes para completar el Bingo: {remaining_cells}")
+                break  # Salir del bucle una vez se ha encontrado la acción
 
         return red_highlight, yellow_highlight
 
@@ -579,22 +599,44 @@ class GameWindow(QWidget):
         
         pixmap = QPixmap.fromImage(img)
         self.bingo_widgets[bingo_name].setPixmap(pixmap)    
-      
+
+    def update_action_status(self, bingo_name, red_action, yellow_action):
+        self.red_current_action, self.yellow_current_action, self.na_current_action = [], [], []
+        if red_action: self.red_current_action.append(bingo_name)
+        elif yellow_action: self.yellow_current_action.append(bingo_name)
+        else: self.na_current_action.append(bingo_name)
+
     def update_statistics(self):
+        # Actualizar la última acción jugada
+        self.last_action_label.setText(f"Última jugada: {self.current_action}")
+        
+        # Actualizar la cantidad total de jugadas realizadas
+        self.actions_count_label.setText(f"\nTotal de jugadas: {len(self.current_round['actions'])}")
+        
+        # Evaluar el estado de la acción anterior
+        if self.red_current_action:
+            bingo_names = ", ".join(self.red_current_action)
+        else: bingo_names = "N/A"
+        self.previous_action_status_red.setText(f"Fue efectiva para: {bingo_names}")
+            
+        if self.yellow_current_action:
+            bingo_names = ", ".join(self.yellow_current_action)
+        else: bingo_names = "N/A"
+        self.previous_action_status_yellow.setText(f"Fue parcialmente efectiva para: {bingo_names}")
+            
+        if self.na_current_action:
+            bingo_names = ", ".join(self.na_current_action)
+        else: bingo_names = "N/A"
+        self.previous_action_status_NA.setText(f"No fue efectiva para: {bingo_names}")
+
         #Update data
         for key in self.bingos_carts.keys():
             if self.bingos_carts[key]['boxes_to_fill'] == 0:
-                self.round_win.emit()  # Emitir la señal cuando se gana la ronda
                 self.round_win_details = key
-
+                self.round_win.emit()  # Emitir la señal cuando se gana la ronda
+                
             self.bingos_carts[key]['boxes_to_fill'] = self.boxes_to_fill_total
 
-        #Ultima acción
-        self.last_action_label.setText(f"Última jugada: {self.current_action}")
-        
-        #Total de acciones
-        self.actions_count_label.setText(f"Total de jugadas: {len(self.current_round['actions'])}")
-        
     def save_game_data(self):
         #Actualizar ronda 
         self.current_round["modification_time"] = str(datetime.now())        

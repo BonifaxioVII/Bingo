@@ -92,5 +92,5 @@ class BingoWinnerWindow(QWidget):
             painter.drawEllipse(particle["position"], 10, 10)
 
     def statistics(self):
-        self.statistics_command.emit()
+        #self.statistics_command.emit()
         self.close()
