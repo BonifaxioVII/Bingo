@@ -528,7 +528,7 @@ class NewGameWindow(QWidget):
     def load_bingo_list(self):     
         # Posibles cartones de bingo para jugar           
         for card_id, data in self.bingos.items():
-            item_text = f"ID: {card_id} | Creación: {data['creation_time']} | Última Modificación: {data.get('last_modified', 'N/A')}"
+            item_text = f"ID: {card_id} | Creación: {data['creation_time']} | Última Modificación: {data['modification_time']}"
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, card_id)
             self.bingo_list_widget.addItem(item)

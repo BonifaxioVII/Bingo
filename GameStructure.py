@@ -55,9 +55,9 @@ class GameProcess(QMainWindow):
 
     def show_bingo_winner(self):
         id_bingo = self.current_window.round_win_details
-        self.current_window.close()
 
         self.confetti_window = BingoWinnerWindow(id_bingo)
+        self.current_window.close()
         self.current_window = self.confetti_window
 
         self.confetti_window.statistics_command.connect(self.show_bingo_winner)
@@ -495,10 +495,14 @@ class GameWindow(QWidget):
             QMessageBox.critical(self, "Error", "Por favor, ingrese un número válido.")
             return
 
-        # Validar que el número esté en el rango permitido (1-80)
-        if number < 1 or number > 80:
-            QMessageBox.critical(self, "Error", "Por favor, ingrese un número entre 1 y 80.")
-            return
+        # Validar que el número esté en el rango permitido 
+        dict_letter = {'B': 0, 'I': 1, 'N': 2, 'G': 3, 'O': 4}
+        id_column = dict_letter[letter]
+        rangos = ranges[id_column][0], ranges[id_column][1]
+
+        if int(number_input) < rangos[0] or int(number_input) > rangos[1]:
+            QMessageBox.critical(self, "Error", f"En la columna '{letter}' solo pueden haber números entre {rangos[0]} y {rangos[1]}")
+            return False
 
         # Formatear la acción actual
         self.current_action = f"{letter}{number_input}"
@@ -522,6 +526,8 @@ class GameWindow(QWidget):
         self.update_data()
 
     def process_bingo(self):
+        self.red_current_action, self.yellow_current_action, self.na_current_action = [], [], []
+
         # Iterado por cada uno de los bingos
         for bingo_name, data in self.bingos_carts.items():
             bingo_numbers = data['numbers']
@@ -639,7 +645,6 @@ class GameWindow(QWidget):
         self.bingo_widgets[bingo_name].setPixmap(pixmap)    
 
     def update_action_status(self, bingo_name, red_action, yellow_action):
-        self.red_current_action, self.yellow_current_action, self.na_current_action = [], [], []
         if red_action: self.red_current_action.append(bingo_name)
         elif yellow_action: self.yellow_current_action.append(bingo_name)
         else: self.na_current_action.append(bingo_name)
@@ -706,3 +711,10 @@ class GameWindow(QWidget):
         with open(saved_games_path, 'w') as file:
             json.dump(self.games, file, indent=4)
 
+    def closeEvent(self, event):
+        # Confirmar salida
+        reply = QMessageBox.question(self, 'Salir', '¿Estás seguro de que quieres salir?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
