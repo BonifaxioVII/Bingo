@@ -1,7 +1,7 @@
 from datetime import datetime
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, 
                             QPushButton, QGridLayout, QMessageBox,
-                            QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea) 
+                            QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea, QListWidget) 
 from PyQt5.QtGui import QImage, QFont, QPixmap, QPainter, QColor
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PIL import Image, ImageDraw, ImageFont
@@ -337,6 +337,12 @@ class GameWindow(QWidget):
         self.current_round = self.current_game['rounds'][self.round_number]
         self.round_start_time = datetime.now()
 
+        #Casillas totales por llenar
+        self.boxes_to_fill_total = 0
+        for row in self.current_round['grid_matrix']:
+            for number in row:
+                if int(number) == 1: self.boxes_to_fill_total += 1
+
     def load_bingos_data(self):
         self.bingos_carts = {}
 
@@ -346,7 +352,8 @@ class GameWindow(QWidget):
 
         for key, values in bingos.items():
             if key in self.current_game["bingos"]:
-                self.bingos_carts[key] = values["bingo_numbers"]
+                self.bingos_carts[key] = {'numbers': values["bingo_numbers"],
+                                          'boxes_to_fill': self.boxes_to_fill_total}
 
     def create_widgets(self):
         # Nombre de la app
@@ -404,6 +411,9 @@ class GameWindow(QWidget):
 
         # Grupo de visualización de cartones de Bingo
         self.create_bingo_visualization()
+
+        # Grupo de estadisticas
+        self.create_statistics_section()
  
     def actions_game(self):
         # Entrada para el número y letra que se está jugando
@@ -454,8 +464,30 @@ class GameWindow(QWidget):
 
             self.bingo_widgets[bingo_name] = bingo_view
 
+            # Contador de casillas faltantes para completar el Bingo
+            missing_cells_label = QLabel(self)
+            missing_cells_label.setAlignment(Qt.AlignCenter)
+            self.bingo_layout.addWidget(missing_cells_label)
+            self.bingo_widgets[bingo_name + "_missing"] = missing_cells_label
+
         self.bingo_group_box.setLayout(self.bingo_layout)
         self.layout.addWidget(self.bingo_group_box)
+
+    def create_statistics_section(self):
+        # Crear un grupo para la sección de estadísticas
+        self.statistics_group_box = QGroupBox("Estadísticas del Juego")
+        self.statistics_layout = QVBoxLayout()
+
+        # Estado de la última jugada
+        self.last_action_label = QLabel("Última acción: N/A")
+        self.statistics_layout.addWidget(self.last_action_label)
+
+        # Contador de jugadas realizadas
+        self.actions_count_label = QLabel("Total de jugadas: 0")
+        self.statistics_layout.addWidget(self.actions_count_label)
+
+        self.statistics_group_box.setLayout(self.statistics_layout)
+        self.layout.addWidget(self.statistics_group_box)
 
     def update_round_duration(self):
         elapsed_time = datetime.now() - self.round_start_time
@@ -498,17 +530,19 @@ class GameWindow(QWidget):
         
         self.save_game_data()
         self.process_bingo()
+        self.update_statistics()
 
     def process_bingo(self):
-        for bingo_name, bingo_numbers in self.bingos_carts.items():
-            red_highlight, yellow_highlight = self.process_bingo_actions(bingo_numbers, 
-                                                                         self.current_round["grid_matrix"], 
-                                                                         self.current_round["actions"])
+        for bingo_name, data in self.bingos_carts.items():
+            bingo_numbers = data['numbers']
+            red_highlight, yellow_highlight = self.check_bingo_actions(bingo_name, bingo_numbers, 
+                                                                        self.current_round["grid_matrix"], 
+                                                                        self.current_round["actions"])
         
             # Actualizar la visualización del cartón de Bingo
             self.update_bingo_visualization(bingo_name, bingo_numbers, red_highlight, yellow_highlight)
 
-    def process_bingo_actions(self, bingo_numbers, grid_matrix, actions):       
+    def check_bingo_actions(self, bingo_name, bingo_numbers, grid_matrix, actions):       
         # Diccionario para asociar las letras con los índices de las columnas
         column_mapping = {'B': 0, 'I': 1, 'N': 2, 'G': 3, 'O': 4}
 
@@ -529,8 +563,13 @@ class GameWindow(QWidget):
                     # Verificar si la casilla está marcada en grid_matrix
                     if grid_matrix[row_index][column_index] == 1:
                         red_highlight.append(action)
+                        self.bingos_carts[bingo_name]['boxes_to_fill'] -= 1
+
                     else:
                         yellow_highlight.append(action)
+                        
+                    remaining_cells = self.bingos_carts[bingo_name]['boxes_to_fill']
+                    self.bingo_widgets[bingo_name + "_missing"].setText(f"Casillas restantes para completar el Bingo: {remaining_cells}")
                     break  # Salir del bucle una vez se ha encontrado la acción
 
         return red_highlight, yellow_highlight
@@ -574,7 +613,18 @@ class GameWindow(QWidget):
         
         pixmap = QPixmap.fromImage(img)
         self.bingo_widgets[bingo_name].setPixmap(pixmap)    
-    
+      
+    def update_statistics(self):
+        #Update data
+        for key in self.bingos_carts.keys():
+            self.bingos_carts[key]['boxes_to_fill'] = self.boxes_to_fill_total
+
+        #Ultima acción
+        self.last_action_label.setText(f"Última jugada: {self.current_action}")
+        
+        #Total de acciones
+        self.actions_count_label.setText(f"Total de jugadas: {len(self.current_round['actions'])}")
+        
     def save_game_data(self):
         #Actualizar ronda 
         self.current_round["modification_time"] = str(datetime.now())        
@@ -589,7 +639,7 @@ class GameWindow(QWidget):
 
         with open(saved_games_path, 'w') as file:
             json.dump(self.games, file, indent=4)
-  
+
     def closeEvent(self, event):
         # Confirmar salida
         reply = QMessageBox.question(self, 'Salir', '¿Estás seguro de que quieres salir?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
