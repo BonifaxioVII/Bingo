@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QFrame, QScrollArea,
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap, QColor
 from PIL import Image, ImageDraw, ImageFont
-from GameStructure import GameWindow, RoundWindow, GameProcess
+from GameStructure import GameProcess
 from GameStructure import saved_carts_path, saved_games_path, img_cart_dir, img_game_dir, ranges
 
 

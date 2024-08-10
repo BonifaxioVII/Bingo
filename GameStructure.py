@@ -1,7 +1,7 @@
 from datetime import datetime
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, QTableWidget,
                             QPushButton, QGridLayout, QMessageBox, QTableWidgetItem,
-                            QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea, QListWidget) 
+                            QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea, QInputDialog) 
 from PyQt5.QtGui import QImage, QFont, QPixmap, QPainter, QColor
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PIL import Image, ImageDraw, ImageFont
@@ -53,25 +53,39 @@ class GameProcess(QMainWindow):
         self.round_number = 0
         self.current_window = None
 
-    def show_bingo_winner(self):
-        id_bingo = self.current_window.round_win_details
-
-        self.confetti_window = BingoWinnerWindow(id_bingo)
-        self.current_window.close()
-        self.current_window = self.confetti_window
-
-        self.confetti_window.statistics_command.connect(self.show_bingo_winner)
-        self.confetti_window.show()
-
     def start_game(self):
         self.start_new_round()
 
+    def ask_for_new_round(self):
+        self.game_window.save_game_data()
+
+        # Cerrar la ventana actual de manera adecuada según el tipo de ventana
+        if isinstance(self.current_window, GameWindow):
+            self.current_window.exit_without_confirmation()
+        else: self.current_window.close()
+
+        # Mostrar un cuadro de diálogo preguntando si desea iniciar una nueva ronda
+        reply = QMessageBox.question(self, 'Nueva Ronda', '¿Desea iniciar una nueva ronda?',
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            self.start_new_round()
+        else:
+            self.close()
+
+    def show_bingo_winner(self):
+        id_bingo = self.current_window.round_win_details
+        self.game_window.save_game_data()
+        self.current_window.exit_without_confirmation()
+
+        self.confetti_window = BingoWinnerWindow(id_bingo)
+        self.current_window = self.confetti_window
+
+        self.confetti_window.accept_command.connect(self.ask_for_new_round)
+        self.confetti_window.show()
+
     def start_new_round(self):
         self.round_number += 1
-
-        # Cerrar la ventana anterior si existe
-        if self.current_window is not None:
-            self.current_window.close()
 
         # Crear y mostrar la ventana de la ronda
         self.round_window = RoundWindow(self.game_name, self.round_number)
@@ -81,13 +95,14 @@ class GameProcess(QMainWindow):
         self.round_window.show()
 
     def load_game_window(self):
-        # Cerrar la ventana anterior
+        # Cerrar la ventana anterior de manera adecuada
         self.current_window.close()
 
         # Crear y mostrar la ventana del juego
         self.game_window = GameWindow(self.game_name)
         self.current_window = self.game_window
 
+        self.game_window.round_completed.connect(self.ask_for_new_round)
         self.game_window.round_win.connect(self.show_bingo_winner)
         self.game_window.show()
 
@@ -304,6 +319,7 @@ class GameWindow(QWidget):
             self.games = json.load(file)
 
         #Data base
+        self.show_exit_confirmation = True
         self.current_game = self.games[self.game_name]
         self.round_number = str(len(self.current_game['rounds']))   
         self.current_round = self.current_game['rounds'][self.round_number]
@@ -311,6 +327,7 @@ class GameWindow(QWidget):
         self.round_win_details = None
         # Lista que guarda los números jugados
         self.played_numbers = []
+        self.current_action = None
 
         #Casillas totales por llenar
         self.boxes_to_fill_total = 0
@@ -389,6 +406,11 @@ class GameWindow(QWidget):
 
         # Grupo de estadisticas
         self.create_statistics_section()
+
+        # Botón para registrar un ganador externo
+        self.external_winner_btn = QPushButton("Registrar Ganador Externo")
+        self.external_winner_btn.clicked.connect(self.register_external_winner)
+        self.layout.addWidget(self.external_winner_btn)
  
     def actions_game(self):
         # Entrada para el número y letra que se está jugando
@@ -682,6 +704,8 @@ class GameWindow(QWidget):
                     item.setBackground(QColor('white'))  # Fondo blanco si no está jugado
 
     def update_data(self):
+        print(f">>> Jugada: {self.current_action}")
+
         # Añadir nuevo número jugado y actualizar la tabla
         new_number = int(self.current_action[1:])
         if new_number not in self.played_numbers:
@@ -691,20 +715,35 @@ class GameWindow(QWidget):
         # Actualizar información de bingos
         for key in self.bingos_carts.keys():
             if self.bingos_carts[key]['boxes_to_fill'] == 0:
+                self.current_game['rounds'][self.round_number]['Ganador'] = "User"
                 self.round_win_details = key
                 self.round_win.emit()  # Emitir la señal cuando se gana la ronda
                 
             self.bingos_carts[key]['boxes_to_fill'] = self.boxes_to_fill_total
 
+    def register_external_winner(self):
+        # Abrir un cuadro de diálogo para ingresar el nombre del ganador
+        winner_name, ok = QInputDialog.getText(self, 'Ganador Externo', 'Alguien externo ha ganado. \nIngrese el nombre del ganador:')
+        
+        if ok and winner_name:
+            # Guardar o procesar el nombre del ganador según sea necesario
+            print(f">>> El ganador de la ronda: {winner_name}")
+            self.current_game['rounds'][self.round_number]['Ganador'] = winner_name
+            self.round_completed.emit()
+
     def save_game_data(self):
         #Actualizar ronda 
-        self.current_round["modification_time"] = str(datetime.now())        
-        self.current_round['actions'].append(self.current_action)
+        self.current_round["modification_time"] = str(datetime.now())  
+
+        #Actualizar la acción
+        if self.current_action:
+            if self.current_action not in self.current_round['actions']:      
+                self.current_round['actions'].append(self.current_action)
 
         # Actualiza del juego
         self.current_game['rounds'][self.round_number] = self.current_round
         self.current_game['modification_time'] = str(datetime.now())
-        
+
         # Actualización general
         self.games[self.game_name] = self.current_game  
 
@@ -712,9 +751,18 @@ class GameWindow(QWidget):
             json.dump(self.games, file, indent=4)
 
     def closeEvent(self, event):
-        # Confirmar salida
-        reply = QMessageBox.question(self, 'Salir', '¿Estás seguro de que quieres salir?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            event.accept()
+        if self.show_exit_confirmation:
+            # Confirmar salida
+            reply = QMessageBox.question(self, 'Salir', '¿Estás seguro de que quieres salir?', 
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                event.accept()
+            else:
+                event.ignore()
         else:
-            event.ignore()
+            event.accept()  # Salir directamente sin preguntar
+
+    def exit_without_confirmation(self):
+        """Función para salir sin mostrar la confirmación de QMessageBox."""
+        self.show_exit_confirmation = False
+        self.close()

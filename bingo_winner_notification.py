@@ -4,6 +4,7 @@ from PyQt5.QtGui import QPainter, QColor, QFont, QLinearGradient, QPalette
 import random
 
 class BingoWinnerWindow(QWidget):
+    accept_command = pyqtSignal()
     statistics_command = pyqtSignal()
     def __init__(self, bingo_id):
         super().__init__()
@@ -94,3 +95,7 @@ class BingoWinnerWindow(QWidget):
     def statistics(self):
         #self.statistics_command.emit()
         self.close()
+
+    def closeEvent(self, event):
+        self.accept_command.emit()
+            
