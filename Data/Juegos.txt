@@ -225,5 +225,281 @@
         },
         "creation_time": "2024-08-09 19:28:16",
         "modification_time": "2024-08-09 19:28:34.304670"
+    },
+    "QWERTY": {
+        "bingos": [
+            "A31",
+            "A123"
+        ],
+        "rounds": {
+            "1": {
+                "creation_time": "2024-08-09 19:58:52.748409",
+                "modification_time": null,
+                "grid_image": "Data\\ImgGames\\QWERTY\\Round_1.png",
+                "grid_matrix": [
+                    [
+                        0,
+                        0,
+                        1,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ]
+                ],
+                "actions": []
+            }
+        },
+        "creation_time": "2024-08-09 19:58:50",
+        "modification_time": "2024-08-09 19:58:52.748409"
+    },
+    "QWERT2": {
+        "bingos": [
+            "A31",
+            "A123"
+        ],
+        "rounds": {
+            "1": {
+                "creation_time": "2024-08-09 19:59:56.376082",
+                "modification_time": "2024-08-09 20:00:15.857076",
+                "grid_image": "Data\\ImgGames\\QWERT2\\Round_1.png",
+                "grid_matrix": [
+                    [
+                        0,
+                        0,
+                        1,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        1,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ]
+                ],
+                "actions": [
+                    "N12",
+                    "N3",
+                    "N8"
+                ]
+            }
+        },
+        "creation_time": "2024-08-09 19:59:54",
+        "modification_time": "2024-08-09 20:00:15.857076"
+    },
+    "QWR": {
+        "bingos": [
+            "A31",
+            "A123"
+        ],
+        "rounds": {
+            "1": {
+                "creation_time": "2024-08-09 20:03:07.372671",
+                "modification_time": "2024-08-09 20:03:33.483489",
+                "grid_image": "Data\\ImgGames\\QWR\\Round_1.png",
+                "grid_matrix": [
+                    [
+                        0,
+                        1,
+                        1,
+                        1,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ]
+                ],
+                "actions": [
+                    "I2",
+                    "N3",
+                    "G4"
+                ]
+            }
+        },
+        "creation_time": "2024-08-09 20:03:04",
+        "modification_time": "2024-08-09 20:03:33.483489"
+    },
+    "AQWQ": {
+        "bingos": [
+            "A123"
+        ],
+        "rounds": {
+            "1": {
+                "creation_time": "2024-08-09 20:05:51.369060",
+                "modification_time": "2024-08-09 20:05:57.246390",
+                "grid_image": "Data\\ImgGames\\AQWQ\\Round_1.png",
+                "grid_matrix": [
+                    [
+                        0,
+                        0,
+                        1,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ]
+                ],
+                "actions": [
+                    "N3"
+                ]
+            }
+        },
+        "creation_time": "2024-08-09 20:05:48",
+        "modification_time": "2024-08-09 20:05:57.246390"
+    },
+    "CASDCASDAS": {
+        "bingos": [
+            "A123"
+        ],
+        "rounds": {
+            "1": {
+                "creation_time": "2024-08-09 20:08:00.509870",
+                "modification_time": "2024-08-09 20:08:12.994894",
+                "grid_image": "Data\\ImgGames\\CASDCASDAS\\Round_1.png",
+                "grid_matrix": [
+                    [
+                        0,
+                        0,
+                        1,
+                        1,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
+                    ]
+                ],
+                "actions": [
+                    "N3",
+                    "G4"
+                ]
+            }
+        },
+        "creation_time": "2024-08-09 20:07:58",
+        "modification_time": "2024-08-09 20:08:12.994894"
     }
 }

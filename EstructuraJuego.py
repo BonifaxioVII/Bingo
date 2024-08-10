@@ -1,12 +1,14 @@
 from datetime import datetime
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, 
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, QApplication,
                             QPushButton, QGridLayout, QMessageBox,
                             QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea, QListWidget) 
 from PyQt5.QtGui import QImage, QFont, QPixmap, QPainter, QColor
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PIL import Image, ImageDraw, ImageFont
+from bingo_winner_notification import BingoWinnerWindow
 import json
 import os
+import sys
 
 # Configuración inicial
 def conf_carts():
@@ -44,6 +46,16 @@ class GameProcess(QMainWindow):
         self.round_number = 0
         self.current_window = None
 
+    def show_bingo_winner(self):
+        id_bingo = self.current_window.round_win_details
+        self.current_window.close()
+
+        self.confetti_window = BingoWinnerWindow(id_bingo)
+        self.current_window = self.confetti_window
+
+        self.confetti_window.statistics_command.connect(self.show_bingo_winner)
+        self.confetti_window.show()
+
     def start_game(self):
         self.start_new_round()
 
@@ -68,57 +80,9 @@ class GameProcess(QMainWindow):
         # Crear y mostrar la ventana del juego
         self.game_window = GameWindow(self.game_name)
         self.current_window = self.game_window
-        self.game_window.round_completed.connect(self.start_new_round)
+
+        self.game_window.round_win.connect(self.show_bingo_winner)
         self.game_window.show()
-
-class BingoVisualizer(QWidget):
-    def __init__(self, bingo_id, bingo_numbers, yellow_highlights=None, red_highlights=None, parent=None):
-        super().__init__(parent)
-        self.bingo_id = bingo_id
-        self.bingo_numbers = bingo_numbers
-        self.yellow_highlights = yellow_highlights if yellow_highlights else []
-        self.red_highlights = red_highlights if red_highlights else []
-
-        self.init_ui()
-
-    def init_ui(self):
-        self.setWindowTitle(f'Bingo ID: {self.bingo_id}')
-        self.setGeometry(100, 100, 500, 500)
-
-        layout = QGridLayout(self)
-
-        # Crear encabezados de BINGO
-        headers = ['B', 'I', 'N', 'G', 'O']
-        for col, header in enumerate(headers):
-            header_label = QLabel(header, self)
-            header_label.setAlignment(Qt.AlignCenter)
-            header_label.setFont(QFont("Arial", 14, QFont.Bold))
-            layout.addWidget(header_label, 0, col)
-
-        # Crear la cuadrícula de bingo
-        for row, row_values in enumerate(self.bingo_numbers):
-            for col, number in enumerate(row_values):
-                # Manejar el valor central que debe ser "GO"
-                if row == 2 and col == 2:
-                    label = QLabel("GO", self)
-                    label.setAlignment(Qt.AlignCenter)
-                    label.setFont(QFont("Arial", 14, QFont.Bold))
-                    label.setStyleSheet("background-color: lightgray;")  # Color especial para la casilla central
-                    continue
-
-                label = QLabel(str(number), self)
-                label.setAlignment(Qt.AlignCenter)
-                label.setFont(QFont("Arial", 12))
-
-                # Resaltar la casilla según el tipo de resaltado
-                if (row, col) in self.yellow_highlights:
-                    label.setStyleSheet("background-color: yellow;")
-                elif (row, col) in self.red_highlights:
-                    label.setStyleSheet("background-color: red;")
-
-                layout.addWidget(label, row + 1, col)  # +1 para dejar espacio para el encabezado
-
-        self.setLayout(layout)
 
 class RoundWindow(QWidget):
     figure_make = pyqtSignal()
@@ -296,6 +260,7 @@ class RoundWindow(QWidget):
 
 class GameWindow(QWidget):
     round_completed = pyqtSignal()
+    round_win = pyqtSignal()
     def __init__(self, game_name, parent=None):
         # Establecer ScrollBar
         super().__init__(parent)
@@ -331,11 +296,12 @@ class GameWindow(QWidget):
         with open(saved_games_path, 'r') as file:
             self.games = json.load(file)
 
-        #Diccionarios base
+        #Data base
         self.current_game = self.games[self.game_name]
         self.round_number = str(len(self.current_game['rounds']))   
         self.current_round = self.current_game['rounds'][self.round_number]
         self.round_start_time = datetime.now()
+        self.round_win_details = None
 
         #Casillas totales por llenar
         self.boxes_to_fill_total = 0
@@ -617,6 +583,10 @@ class GameWindow(QWidget):
     def update_statistics(self):
         #Update data
         for key in self.bingos_carts.keys():
+            if self.bingos_carts[key]['boxes_to_fill'] == 0:
+                self.round_win.emit()  # Emitir la señal cuando se gana la ronda
+                self.round_win_details = key
+
             self.bingos_carts[key]['boxes_to_fill'] = self.boxes_to_fill_total
 
         #Ultima acción
@@ -640,10 +610,3 @@ class GameWindow(QWidget):
         with open(saved_games_path, 'w') as file:
             json.dump(self.games, file, indent=4)
 
-    def closeEvent(self, event):
-        # Confirmar salida
-        reply = QMessageBox.question(self, 'Salir', '¿Estás seguro de que quieres salir?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            event.accept()
-        else:
-            event.ignore()
