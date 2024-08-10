@@ -8,8 +8,8 @@ from PyQt5.QtWidgets import (QWidget, QApplication, QFrame, QScrollArea,
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap, QColor
 from PIL import Image, ImageDraw, ImageFont
-from EstructuraJuego import GameWindow, RoundWindow, GameProcess
-from EstructuraJuego import saved_carts_path, saved_games_path, img_cart_dir, img_game_dir
+from GameStructure import GameWindow, RoundWindow, GameProcess
+from GameStructure import saved_carts_path, saved_games_path, img_cart_dir, img_game_dir, ranges
 
 
 # Interfaz del cartón de Bingo
@@ -184,25 +184,36 @@ class BingoCard(QWidget):
         #Verificar estado del grid
         self.bingo_numbers = []
         numbers_set = set()
+        column = ('B', 'I', 'N', 'G', 'O')
+
         for row in self.cells:
             row_numbers = []
+
+            id_column = 0
             for cell in row:
                 if cell is None:
                     row_numbers.append("GO")
+                    id_column += 1
                     continue
+
                 value = cell.text()
+                rangos = ranges[id_column][0], ranges[id_column][1]
+
                 if not value.isdigit():
                     QMessageBox.critical(self, "Error", "Todas las casillas deben estar llenas con números válidos.")
-                    return False
-                elif int(value) > 80 or int(value) < 1:
-                    QMessageBox.critical(self, "Error", "Los números deben ser entre 1 y 80.")
                     return False
                 elif int(value) in numbers_set:
                     QMessageBox.critical(self, "Error", "No se pueden repetir números en diferentes casillas.")
                     return False
-                
+                elif int(value) < rangos[0] or int(value) > rangos[1]:
+                    letter_id = column[id_column]
+                    QMessageBox.critical(self, "Error", f"En la columna '{letter_id}' solo pueden haber números entre {rangos[0]} y {rangos[1]}")
+                    return False
+
                 row_numbers.append(int(value))
                 numbers_set.add(int(value))
+                id_column += 1
+            
             self.bingo_numbers.append(row_numbers)
 
         return True

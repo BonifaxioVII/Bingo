@@ -1,6 +1,6 @@
 from datetime import datetime
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, QApplication,
-                            QPushButton, QGridLayout, QMessageBox,
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, QTableWidget,
+                            QPushButton, QGridLayout, QMessageBox, QTableWidgetItem,
                             QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea, QListWidget) 
 from PyQt5.QtGui import QImage, QFont, QPixmap, QPainter, QColor
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
@@ -9,6 +9,13 @@ from bingo_winner_notification import BingoWinnerWindow
 import json
 import os
 import sys
+
+# Rellenar la tabla con los números
+ranges = [(1, 15),  #B
+          (16, 30), #I
+          (31, 45), #N
+          (46, 60), #G
+          (61, 75)] #O
 
 # Configuración inicial
 def conf_carts():
@@ -302,6 +309,8 @@ class GameWindow(QWidget):
         self.current_round = self.current_game['rounds'][self.round_number]
         self.round_start_time = datetime.now()
         self.round_win_details = None
+        # Lista que guarda los números jugados
+        self.played_numbers = []
 
         #Casillas totales por llenar
         self.boxes_to_fill_total = 0
@@ -460,6 +469,11 @@ class GameWindow(QWidget):
         self.actions_count_label = QLabel("\nTotal de jugadas: 0")
         self.statistics_layout.addWidget(self.actions_count_label)
 
+        # Tabla de números jugados
+        self.setup_numbers_table()
+        self.statistics_layout.addWidget(QLabel("Números jugados:"))
+        self.statistics_layout.addWidget(self.numbers_table)
+
         self.statistics_group_box.setLayout(self.statistics_layout)
         self.layout.addWidget(self.statistics_group_box)
 
@@ -505,6 +519,7 @@ class GameWindow(QWidget):
         self.save_game_data()
         self.process_bingo()
         self.update_statistics()
+        self.update_data()
 
     def process_bingo(self):
         # Iterado por cada uno de los bingos
@@ -560,6 +575,29 @@ class GameWindow(QWidget):
 
         return red_highlight, yellow_highlight
 
+    def setup_numbers_table(self):
+        # Configuración de la tabla
+        self.numbers_table = QTableWidget(5, 15)  # 5 filas (BINGO) y 16 columnas
+        self.numbers_table.setHorizontalHeaderLabels([str(i) for i in range(1, 16)])
+        self.numbers_table.setVerticalHeaderLabels(['B', 'I', 'N', 'G', 'O'])
+        self.numbers_table.setFixedSize(1208, 290)  # Ajusta el tamaño total de la tabla
+        self.numbers_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        
+        # Configura el tamaño de cada celda para que encaje en el tamaño de la tabla
+        for i in range(5):
+            for j in range(15):
+                item = QTableWidgetItem()
+                item.setTextAlignment(Qt.AlignCenter)
+                item.setFont(QFont("Arial", 8))  # Tamaño de fuente reducido
+                self.numbers_table.setItem(i, j, item)
+                self.numbers_table.setColumnWidth(j, 25)  # Ajusta el ancho de las columnas
+            self.numbers_table.setRowHeight(i, 20)  # Ajusta la altura de las filas
+        
+        # Inserta los números en la tabla
+        for i, (start, end) in enumerate(ranges):
+            for j in range(start, end+1):
+                self.numbers_table.item(i, j - start).setText(str(j))
+                         
     def update_bingo_visualization(self, bingo_name, bingo_numbers, red_highlight, yellow_highlight):
         # Crear una imagen del cartón de Bingo
         img = QImage(300, 360, QImage.Format_RGB32)
@@ -629,7 +667,23 @@ class GameWindow(QWidget):
         else: bingo_names = "N/A"
         self.previous_action_status_NA.setText(f"No fue efectiva para: {bingo_names}")
 
-        #Update data
+    def update_numbers_table(self):        
+        for i, (start, end) in enumerate(ranges):
+            for j in range(start, end):
+                item = self.numbers_table.item(i, j - start)
+                if j in self.played_numbers:
+                    item.setBackground(QColor('yellow'))  # Resaltar en amarillo
+                else:
+                    item.setBackground(QColor('white'))  # Fondo blanco si no está jugado
+
+    def update_data(self):
+        # Añadir nuevo número jugado y actualizar la tabla
+        new_number = int(self.current_action[1:])
+        if new_number not in self.played_numbers:
+            self.played_numbers.append(new_number)
+            self.update_numbers_table()
+
+        # Actualizar información de bingos
         for key in self.bingos_carts.keys():
             if self.bingos_carts[key]['boxes_to_fill'] == 0:
                 self.round_win_details = key

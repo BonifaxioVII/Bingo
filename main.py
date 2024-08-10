@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from EstructuraBingo import BingoCard, EditViewWindow, NewGameWindow
+from BingoCardStructure import BingoCard, EditViewWindow, NewGameWindow
 
 class MainWindow(QMainWindow): 
     def __init__(self):
