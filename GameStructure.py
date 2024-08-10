@@ -8,7 +8,6 @@ from PIL import Image, ImageDraw, ImageFont
 from bingo_winner_notification import BingoWinnerWindow
 import json
 import os
-import sys
 
 # Rellenar la tabla con los números
 ranges = [(1, 15),  #B
@@ -46,6 +45,133 @@ def conf_carts():
     return saved_carts_path, saved_games_path, img_cart_dir, img_game_dir
 saved_carts_path, saved_games_path, img_cart_dir, img_game_dir = conf_carts()
 
+class StatisticsWindow(QMainWindow):
+    def __init__(self, game_data, bingo_carts, parent=None):
+        super().__init__(parent)
+        self.game_data = game_data
+        self.bingo_carts = bingo_carts
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('Estadísticas del Juego')
+        self.setGeometry(100, 100, 1000, 800)
+        
+        # Crear el widget central y el layout
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+
+        # Mostrar la forma del Bingo que se jugó
+        grid_image_label = QLabel(f"Forma del Bingo que se jugó: {self.game_data['rounds'][str(len(self.game_data['rounds']))]['grid_image']}")
+        layout.addWidget(grid_image_label)
+
+        # Mostrar la cantidad de rondas jugadas y la tabla de jugadas
+        total_rounds = len(self.game_data['rounds'])
+        rounds_label = QLabel(f"\nCantidad de rondas jugadas: {total_rounds}")
+        layout.addWidget(rounds_label)
+
+        rounds_table = QTableWidget()
+        rounds_table.setRowCount(total_rounds)
+        rounds_table.setColumnCount(2)
+        rounds_table.setHorizontalHeaderLabels(['Ronda', 'Acciones'])
+        
+        for i, (round_num, round_data) in enumerate(self.game_data['rounds'].items()):
+            actions = ', '.join(round_data['actions'])
+            rounds_table.setItem(i, 0, QTableWidgetItem(f"Ronda {round_num}"))
+            rounds_table.setItem(i, 1, QTableWidgetItem(actions))
+        
+        layout.addWidget(rounds_table)
+
+        # Mostrar el estado final de todos los Bingos con el grid
+        bingos_label = QLabel("\nEstado final de los Bingos:")
+        layout.addWidget(bingos_label)
+
+        scroll_area = QScrollArea()
+        layout.addWidget(scroll_area)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+
+        for bingo_name, data in self.bingo_carts.items():
+            # Verificar y resaltar las acciones del Bingo
+            grid_matrix = self.game_data['rounds'][str(total_rounds)]['grid_matrix']
+            red_highlight, yellow_highlight = self.process_bingo_actions(bingo_name, data['numbers'], grid_matrix)
+
+            # Mostrar el grid del Bingo
+            grid_label = QLabel(f"{bingo_name} - Casillas restantes: {data['boxes_to_fill']}")
+            scroll_layout.addWidget(grid_label)
+
+            bingo_pixmap = self.create_bingo_pixmap(bingo_name, data['numbers'], red_highlight, yellow_highlight)
+            bingo_label = QLabel()
+            bingo_label.setPixmap(bingo_pixmap)
+            scroll_layout.addWidget(bingo_label)
+        
+        scroll_area.setWidget(scroll_widget)
+    
+    def process_bingo_actions(self, bingo_name, bingo_numbers, grid_matrix):
+        red_highlight, yellow_highlight = [], []
+
+        for action in self.game_data['rounds'][str(len(self.game_data['rounds']))]['actions']:
+            r_high, y_high = self.check_bingo_actions(bingo_name, bingo_numbers, grid_matrix, action)
+            red_highlight.extend(r_high)
+            yellow_highlight.extend(y_high)
+
+        return red_highlight, yellow_highlight
+
+    def check_bingo_actions(self, bingo_name, bingo_numbers, grid_matrix, action):       
+        column_mapping = {'B': 0, 'I': 1, 'N': 2, 'G': 3, 'O': 4}
+
+        red_highlight, yellow_highlight = []
+
+        letter = action[0]  # Primera parte de la acción (B, I, N, G, O)
+        number = int(action[1:])  # Parte numérica de la acción
+        column_index = column_mapping[letter]
+
+        for row_index in range(len(bingo_numbers)):
+            if bingo_numbers[row_index][column_index] == number:
+                if grid_matrix[row_index][column_index] == 1:
+                    red_highlight.append(action)
+                else:
+                    yellow_highlight.append(action)
+                break
+
+        return red_highlight, yellow_highlight
+
+    def create_bingo_pixmap(self, bingo_name, bingo_numbers, red_highlight, yellow_highlight):
+        img = QImage(300, 360, QImage.Format_RGB32)
+        img.fill(Qt.white)
+
+        painter = QPainter(img)
+        cell_size = 60
+        font = QFont("Arial", 10)
+        painter.setFont(font)
+
+        headers = ['B', 'I', 'N', 'G', 'O']
+        for i, header in enumerate(headers):
+            x0 = i * cell_size
+            y0 = 0
+            painter.drawText(x0 + cell_size // 2 - 10, y0 + 30, header)
+
+        for i in range(5):
+            for j in range(5):
+                x0 = j * cell_size
+                y0 = (i + 1) * cell_size
+
+                action = f"{headers[j]}{bingo_numbers[i][j]}"
+                if action in red_highlight:
+                    color = QColor('red')
+                elif action in yellow_highlight:
+                    color = QColor('yellow')
+                else:
+                    color = QColor('white')
+
+                painter.fillRect(x0, y0, cell_size, cell_size, color)
+                painter.drawRect(x0, y0, cell_size, cell_size)
+                painter.drawText(x0 + 20, y0 + 35, str(bingo_numbers[i][j]))
+
+        painter.end()
+        
+        return QPixmap.fromImage(img)
+    
 class GameProcess(QMainWindow):
     def __init__(self, game_name):
         super().__init__()
@@ -73,16 +199,75 @@ class GameProcess(QMainWindow):
         else:
             self.close()
 
-    def show_bingo_winner(self):
-        id_bingo = self.current_window.round_win_details
-        self.game_window.save_game_data()
-        self.current_window.exit_without_confirmation()
+    def show_statistics(self):
+        self.statistics_window = QWidget()
+        self.statistics_window.setWindowTitle('Resumen del juego')
+        self.statistics_window.showFullScreen()
+        
+        # Crear el widget central y el layout
+        central_widget = QWidget()
+        self.statistics_window.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
 
-        self.confetti_window = BingoWinnerWindow(id_bingo)
-        self.current_window = self.confetti_window
+        # 1. Nombre de la app
+        app_name = QLabel("BingoGO", self)
+        app_name.setAlignment(Qt.AlignCenter)
+        app_name.setFont(QFont("Arial", 50))
+        layout.addWidget(app_name)
 
-        self.confetti_window.accept_command.connect(self.ask_for_new_round)
-        self.confetti_window.show()
+        # 2. Resumen del juego
+        header_label = QLabel(f'Resumen del juego: {self.game_name} \nRonda: {self.round_number}', self)
+        header_label.setAlignment(Qt.AlignCenter)
+        header_label.setFont(QFont("Arial", 20))
+        layout.addWidget(header_label)
+
+        # 3. Mostrar la forma del Bingo que se jugó
+        instrucciones_image_label = QLabel("La forma del Bingo que se jugó es la siguiente:", self)
+        instrucciones_image_label.setFont(QFont("Arial", 10))
+        layout.addWidget(instrucciones_image_label)
+        # Imagen de la figura a jugar
+        image_label = QLabel(self)
+        image_label.setPixmap(QPixmap(self.current_round['grid_image']))
+        layout.addWidget(image_label)
+
+        # 4. Mostrar los bingos jugados
+        bingos_label = QLabel("\nEstado final de los Bingos:")
+        layout.addWidget(bingos_label)
+        bingos_table = QTableWidget()
+        bingos_table.setRowCount(len(self.bingo_carts))
+        bingos_table.setColumnCount(2)
+        bingos_table.setHorizontalHeaderLabels(['Bingo', 'Estado'])
+        for i, (bingo_name, bingo_data) in enumerate(self.bingo_carts.items()):
+            boxes_to_fill = bingo_data['boxes_to_fill']
+            status = "Completado" if boxes_to_fill == 0 else f"Incompleto, {boxes_to_fill} casillas faltantes"
+            bingos_table.setItem(i, 0, QTableWidgetItem(bingo_name))
+            bingos_table.setItem(i, 1, QTableWidgetItem(status))
+        
+        layout.addWidget(bingos_table)
+
+
+        # 5. Mostrar la cantidad de rondas jugadas
+        total_rounds = len(self.current_game['rounds'])
+        rounds_label = QLabel(f"\nCantidad de rondas jugadas: {total_rounds}")
+        rounds_label.setFont(QFont("Arial", 10))
+        layout.addWidget(rounds_label)
+
+        # 6. Mostrar el estado final de todos los Bingos
+        
+
+
+        # 7. Mostrar otra cosa
+        rounds_table = QTableWidget()
+        rounds_table.setRowCount(total_rounds)
+        rounds_table.setColumnCount(2)
+        rounds_table.setHorizontalHeaderLabels(['Ronda', 'Acciones'])
+        
+        for i, (round_num, round_data) in enumerate(self.game_data['rounds'].items()):
+            actions = ', '.join(round_data['actions'])
+            rounds_table.setItem(i, 0, QTableWidgetItem(f"Ronda {round_num}"))
+            rounds_table.setItem(i, 1, QTableWidgetItem(actions))
+        
+        layout.addWidget(rounds_table)
 
     def start_new_round(self):
         self.round_number += 1
@@ -102,9 +287,26 @@ class GameProcess(QMainWindow):
         self.game_window = GameWindow(self.game_name)
         self.current_window = self.game_window
 
+        #Cargar información valiosa
+        self.current_game = self.current_window.current_game
+        self.current_round = self.current_window.current_round
+        self.bingo_carts = self.current_window.bingos_carts
+        
         self.game_window.round_completed.connect(self.ask_for_new_round)
         self.game_window.round_win.connect(self.show_bingo_winner)
         self.game_window.show()
+
+    def show_bingo_winner(self):
+        id_bingo = self.current_window.round_win_details
+        self.game_window.save_game_data()
+        self.current_window.exit_without_confirmation()
+
+        self.confetti_window = BingoWinnerWindow(id_bingo)
+        self.current_window = self.confetti_window
+
+        self.confetti_window.accept_command.connect(self.ask_for_new_round)
+        self.confetti_window.statistics_command.connect(self.show_statistics)
+        self.confetti_window.show()
 
 class RoundWindow(QWidget):
     figure_make = pyqtSignal()
@@ -766,3 +968,7 @@ class GameWindow(QWidget):
         """Función para salir sin mostrar la confirmación de QMessageBox."""
         self.show_exit_confirmation = False
         self.close()
+
+
+
+
