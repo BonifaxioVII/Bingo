@@ -1,7 +1,7 @@
 from datetime import datetime
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QLabel, QTableWidget,
                             QPushButton, QGridLayout, QMessageBox, QTableWidgetItem,
-                            QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea, QInputDialog) 
+                            QHBoxLayout, QComboBox, QMainWindow, QGroupBox, QScrollArea, QInputDialog, QAbstractItemView) 
 from PyQt5.QtGui import QImage, QFont, QPixmap, QPainter, QColor
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PIL import Image, ImageDraw, ImageFont
@@ -89,7 +89,7 @@ class StatisticsWindow(QMainWindow):
         scroll_area = QScrollArea()
         layout.addWidget(scroll_area)
         scroll_widget = QWidget()
-        scroll_layout = QVBoxLayout(scroll_widget)
+        scrolright_layout = QVBoxLayout(scroll_widget)
 
         for bingo_name, data in self.bingo_carts.items():
             # Verificar y resaltar las acciones del Bingo
@@ -98,12 +98,12 @@ class StatisticsWindow(QMainWindow):
 
             # Mostrar el grid del Bingo
             grid_label = QLabel(f"{bingo_name} - Casillas restantes: {data['boxes_to_fill']}")
-            scroll_layout.addWidget(grid_label)
+            scrolright_layout.addWidget(grid_label)
 
             bingo_pixmap = self.create_bingo_pixmap(bingo_name, data['numbers'], red_highlight, yellow_highlight)
             bingo_label = QLabel()
             bingo_label.setPixmap(bingo_pixmap)
-            scroll_layout.addWidget(bingo_label)
+            scrolright_layout.addWidget(bingo_label)
         
         scroll_area.setWidget(scroll_widget)
     
@@ -308,6 +308,7 @@ class GameProcess(QMainWindow):
         self.confetti_window.statistics_command.connect(self.show_statistics)
         self.confetti_window.show()
 
+#Completado
 class RoundWindow(QWidget):
     figure_make = pyqtSignal()
     def __init__(self, game_name, round_number, parent=None):
@@ -482,11 +483,11 @@ class RoundWindow(QWidget):
         with open(saved_games_path, 'w') as file:
             json.dump(games_data, file, indent=4)
 
+
 class GameWindow(QWidget):
     round_completed = pyqtSignal()
     round_win = pyqtSignal()
     def __init__(self, game_name, parent=None):
-        # Establecer ScrollBar
         super().__init__(parent)
         self.setWindowTitle('BingoGo')
         self.showFullScreen()
@@ -495,26 +496,20 @@ class GameWindow(QWidget):
         self.load_round_data()
         self.load_bingos_data()
 
-        # Crear un layout principal
-        self.main_layout = QVBoxLayout(self)
+        # Crear un layout principal horizontal (dividir en dos columnas)
+        self.main_layout = QHBoxLayout(self)
         self.setLayout(self.main_layout)
 
-        # Crear un área de scroll
-        self.scroll_area = QScrollArea(self)
-        self.scroll_area.setWidgetResizable(True)
+        # Crear layout de la derecha (información principal)
+        self.left_layout = QVBoxLayout()
+        self.main_layout.addLayout(self.left_layout)
 
-        # Crear un widget de contenedor para el scroll area
-        self.scroll_widget = QWidget()
-        self.scroll_area.setWidget(self.scroll_widget)
+        # Crear layout de la izquierda (estadísticas y bingos)
+        self.right_layout = QVBoxLayout()
+        self.main_layout.addLayout(self.right_layout)
 
-        # Crear el layout que contendrá todos los widgets de la ventana
-        self.layout = QVBoxLayout(self.scroll_widget)
-        
-        # Agregar el scroll area al layout principal
-        self.main_layout.addWidget(self.scroll_area)
-        
         self.create_widgets()
-          
+
     def load_round_data(self):
         # Leer los datos existentes del juego
         with open(saved_games_path, 'r') as file:
@@ -550,74 +545,82 @@ class GameWindow(QWidget):
                                           'boxes_to_fill': self.boxes_to_fill_total}
 
     def create_widgets(self):
+        # Widgets de la izquierda
+        self.create_left_widgets()
+
+        # Widgets de la derecha
+        self.create_right_widgets()
+
+    def create_left_widgets(self):
         # Nombre de la app
         app_name = QLabel("BingoGO", self)
         app_name.setAlignment(Qt.AlignCenter)
         app_name.setFont(QFont("Arial", 50))
-        self.layout.addWidget(app_name)
+        self.left_layout.addWidget(app_name)
 
         # Nombre del juego
         header_label = QLabel(f'Juego: {self.game_name}', self)
         header_label.setAlignment(Qt.AlignCenter)
         header_label.setFont(QFont("Arial", 20))
-        self.layout.addWidget(header_label)
+        self.left_layout.addWidget(header_label)
 
         # Numero de la ronda
         header_label_number = QLabel(f'Ronda número: {self.round_number}', self)
         header_label_number.setAlignment(Qt.AlignCenter)
         header_label_number.setFont(QFont("Arial", 20))
-        self.layout.addWidget(header_label_number)
+        self.left_layout.addWidget(header_label_number)
 
         # Duración de la ronda
         self.duration_label = QLabel("Duración: 00:00:00", self)
         self.duration_label.setAlignment(Qt.AlignCenter)
         self.duration_label.setFont(QFont("Arial", 10))
-        self.layout.addWidget(self.duration_label)
+        self.left_layout.addWidget(self.duration_label)
         
-        # Configuración del temporizador para actualizar la duración de la ronda
+        # Temporizador para actualizar la duración de la ronda
         self.round_duration_timer = QTimer(self)
         self.round_duration_timer.timeout.connect(self.update_round_duration)
         self.round_duration_timer.start(1000)
 
         # Instrucciones de accionar
-        self.instrucciones_acciones = QLabel("Escriba las letras y numeros que vayan dictando:", self)
+        self.instrucciones_acciones = QLabel("Escriba las letras y números que vayan dictando:", self)
         self.instrucciones_acciones.setAlignment(Qt.AlignCenter)
         self.instrucciones_acciones.setFont(QFont("Arial", 15))
-        self.layout.addWidget(self.instrucciones_acciones)
+        self.left_layout.addWidget(self.instrucciones_acciones)
 
         # Agregar acciones del juego
         self.actions_game()
 
-        # Forma de Bingo que se jugará
+        # Instrucciones de la figura de Bingo
         self.instrucciones_image_label = QLabel("La forma del Bingo que se jugará es la siguiente:", self)
         self.instrucciones_image_label.setAlignment(Qt.AlignCenter)
         self.instrucciones_image_label.setFont(QFont("Arial", 15))
-        self.layout.addWidget(self.instrucciones_image_label)
+        self.left_layout.addWidget(self.instrucciones_image_label)
 
         # Imagen de la figura a jugar
         image_label = QLabel(self)
         image_label.setPixmap(QPixmap(self.current_round['grid_image']))
         image_label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(image_label)
-   
+        self.left_layout.addWidget(image_label)
+
         # Botones de guardar y salir
         self.save_buttons()
-
-        # Grupo de visualización de cartones de Bingo
-        self.create_bingo_visualization()
-
-        # Grupo de estadisticas
-        self.create_statistics_section()
 
         # Botón para registrar un ganador externo
         self.external_winner_btn = QPushButton("Registrar Ganador Externo")
         self.external_winner_btn.clicked.connect(self.register_external_winner)
-        self.layout.addWidget(self.external_winner_btn)
- 
+        self.left_layout.addWidget(self.external_winner_btn)
+
+    def create_right_widgets(self):
+        # Crear estadísticas del juego
+        self.create_statistics_section()
+
+        # Visualización de Bingos
+        self.create_bingo_visualization()
+
     def actions_game(self):
         # Entrada para el número y letra que se está jugando
         self.input_layout = QHBoxLayout()
-        
+
         # Desplegable de letras B, I, N, G, O
         self.letter_dropdown = QComboBox(self)
         self.letter_dropdown.addItems(['B', 'I', 'N', 'G', 'O'])
@@ -633,73 +636,90 @@ class GameWindow(QWidget):
         self.input_layout.addWidget(self.number_input)
 
         self.input_layout.setAlignment(Qt.AlignCenter)
-        self.layout.addLayout(self.input_layout)
-
-    def save_buttons(self):
-        # Botón "Jugar"
-        self.play_button = QPushButton("Jugar", self)
-        self.play_button.clicked.connect(self.check_bingo_card)
-        self.layout.addWidget(self.play_button)
-
-        # Botón "Salir"
-        self.exit_button = QPushButton("Salir", self)
-        self.exit_button.clicked.connect(self.close)
-        self.layout.addWidget(self.exit_button)
+        self.left_layout.addLayout(self.input_layout)
 
     def create_bingo_visualization(self):
         self.bingo_group_box = QGroupBox("Visualización de Bingos")
-        self.bingo_layout = QVBoxLayout()
+        self.bingo_layout = QGridLayout()  # Cambiamos a QGridLayout para organizarlos en filas y columnas.
 
         # Crear un widget de visualización por cada cartón de Bingo
         self.bingo_widgets = {}
-        for bingo_name in self.bingos_carts.keys():
+        row, col = 0, 0  # Inicializar fila y columna
+
+        for i, bingo_name in enumerate(self.bingos_carts.keys()):
+            # Crear etiquetas para el nombre del bingo
             label = QLabel(f"Bingo: {bingo_name}")
             label.setFont(QFont("Arial", 15))
-            self.bingo_layout.addWidget(label)
 
+            # Crear visualización del bingo
             bingo_view = QLabel(self)
             bingo_view.setAlignment(Qt.AlignCenter)
-            self.bingo_layout.addWidget(bingo_view)
 
+            # Agregar a la cuadrícula
+            self.bingo_layout.addWidget(label, row, col)
+            self.bingo_layout.addWidget(bingo_view, row + 1, col)
+
+            # Guardar las referencias a los widgets
             self.bingo_widgets[bingo_name] = bingo_view
 
-            # Contador de casillas faltantes para completar el Bingo
+            # Crear y agregar el contador de casillas restantes
             missing_cells_label = QLabel(self)
             missing_cells_label.setAlignment(Qt.AlignCenter)
-            self.bingo_layout.addWidget(missing_cells_label)
+            self.bingo_layout.addWidget(missing_cells_label, row + 2, col)
             self.bingo_widgets[bingo_name + "_missing"] = missing_cells_label
 
+            # Avanzar la columna, y si llegamos a tres, saltamos a la siguiente fila
+            col += 1
+            if col == 3:  # Tres bingos por fila
+                col = 0
+                row += 3  # Saltamos a la siguiente fila (3 posiciones por fila: nombre, visualización, casillas restantes)
+
         self.bingo_group_box.setLayout(self.bingo_layout)
-        self.layout.addWidget(self.bingo_group_box)
+        self.right_layout.addWidget(self.bingo_group_box)
 
     def create_statistics_section(self):
         # Crear un grupo para la sección de estadísticas
         self.statistics_group_box = QGroupBox("Estadísticas del Juego")
         self.statistics_layout = QVBoxLayout()
 
-        # Estado de la última jugada
+        # Última jugada
         self.last_action_label = QLabel("Última acción: N/A")
         self.statistics_layout.addWidget(self.last_action_label)
 
-        # Estado de la acción inmediatamente anterior
-        self.previous_action_status_red = QLabel("Efectiva para: N/A")
-        self.statistics_layout.addWidget(self.previous_action_status_red)
-        self.previous_action_status_yellow = QLabel("Efectiva parcialmente para: N/A")
-        self.statistics_layout.addWidget(self.previous_action_status_yellow)
-        self.previous_action_status_NA = QLabel("No efectiva para: N/A")
-        self.statistics_layout.addWidget(self.previous_action_status_NA)
-
         # Contador de jugadas realizadas
-        self.actions_count_label = QLabel("\nTotal de jugadas: 0")
+        self.actions_count_label = QLabel("Total de jugadas: 0")
         self.statistics_layout.addWidget(self.actions_count_label)
 
-        # Tabla de números jugados
-        self.setup_numbers_table()
+        # Crear la tabla de efectividad
+        self.statistics_table = QTableWidget(1, 3)  # 1 fila y 3 columnas
+        self.statistics_table.setHorizontalHeaderLabels(["Efectivo:", "Parcialmente efectivo:", "No fue efectivo:"])
+        self.statistics_table.setEditTriggers(QAbstractItemView.NoEditTriggers)  # Desactivar la edición
+        self.statistics_table.setFixedHeight(150)  # Altura fija compacta
+        # Ajustar el ancho de las columnas
+        self.statistics_table.setColumnWidth(0, 400)
+        self.statistics_table.setColumnWidth(1, 400)
+        self.statistics_table.setColumnWidth(2, 400)
+        # Agregar la tabla al layout
+        self.statistics_layout.addWidget(self.statistics_table)
+
+        #  Tabla de números jugados
         self.statistics_layout.addWidget(QLabel("Números jugados:"))
+        self.setup_numbers_table()
         self.statistics_layout.addWidget(self.numbers_table)
 
         self.statistics_group_box.setLayout(self.statistics_layout)
-        self.layout.addWidget(self.statistics_group_box)
+        self.right_layout.addWidget(self.statistics_group_box)
+
+    def save_buttons(self):
+        # Botón "Jugar"
+        self.play_button = QPushButton("Jugar", self)
+        self.play_button.clicked.connect(self.check_bingo_card)
+        self.left_layout.addWidget(self.play_button)
+
+        # Botón "Salir"
+        self.exit_button = QPushButton("Salir", self)
+        self.exit_button.clicked.connect(self.close)
+        self.left_layout.addWidget(self.exit_button)
 
     def update_round_duration(self):
         elapsed_time = datetime.now() - self.round_start_time
@@ -882,19 +902,21 @@ class GameWindow(QWidget):
         
         # Evaluar el estado de la acción anterior
         if self.red_current_action:
-            bingo_names = ", ".join(self.red_current_action)
-        else: bingo_names = "N/A"
-        self.previous_action_status_red.setText(f"Fue efectiva para: {bingo_names}")
+            bingo_names_red = ", ".join(self.red_current_action)
+        else: bingo_names_red = "N/A"
             
         if self.yellow_current_action:
-            bingo_names = ", ".join(self.yellow_current_action)
-        else: bingo_names = "N/A"
-        self.previous_action_status_yellow.setText(f"Fue parcialmente efectiva para: {bingo_names}")
+            bingo_names_yellow = ", ".join(self.yellow_current_action)
+        else: bingo_names_yellow = "N/A"
             
         if self.na_current_action:
-            bingo_names = ", ".join(self.na_current_action)
-        else: bingo_names = "N/A"
-        self.previous_action_status_NA.setText(f"No fue efectiva para: {bingo_names}")
+            bingo_names_na = ", ".join(self.na_current_action)
+        else: bingo_names_na = "N/A"
+        
+        # Insertar datos en la tabla
+        self.statistics_table.setItem(0, 0, QTableWidgetItem(bingo_names_red))
+        self.statistics_table.setItem(0, 1, QTableWidgetItem(bingo_names_yellow))
+        self.statistics_table.setItem(0, 2, QTableWidgetItem(bingo_names_na))
 
     def update_numbers_table(self):        
         for i, (start, end) in enumerate(ranges):
