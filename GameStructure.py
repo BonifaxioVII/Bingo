@@ -487,6 +487,8 @@ class RoundWindow(QWidget):
 class GameWindow(QWidget):
     round_completed = pyqtSignal()
     round_win = pyqtSignal()
+
+    # Cargar información ------------------------------------------------------
     def __init__(self, game_name, parent=None):
         super().__init__(parent)
         self.setWindowTitle('BingoGo')
@@ -544,6 +546,7 @@ class GameWindow(QWidget):
                 self.bingos_carts[key] = {'numbers': values["bingo_numbers"],
                                           'boxes_to_fill': self.boxes_to_fill_total}
 
+    # Organizar ventanas -------------------------------------------------------
     def create_widgets(self):
         # Widgets de la izquierda
         self.create_left_widgets()
@@ -617,6 +620,7 @@ class GameWindow(QWidget):
         # Visualización de Bingos
         self.create_bingo_visualization()
 
+    # Contenido de las ventanas ------------------------------------------------
     def actions_game(self):
         # Entrada para el número y letra que se está jugando
         self.input_layout = QHBoxLayout()
@@ -725,6 +729,49 @@ class GameWindow(QWidget):
         elapsed_time = datetime.now() - self.round_start_time
         self.duration_label.setText(f"Duración: {str(elapsed_time).split('.')[0]}")
 
+    def register_external_winner(self):
+        # Abrir un cuadro de diálogo para ingresar el nombre del ganador
+        winner_name, ok = QInputDialog.getText(self, 'Ganador Externo', 'Alguien externo ha ganado. \nIngrese el nombre del ganador:')
+        
+        if ok and winner_name:
+            # Guardar o procesar el nombre del ganador según sea necesario
+            print(f">>> El ganador de la ronda: {winner_name}")
+            self.current_game['rounds'][self.round_number]['Ganador'] = winner_name
+            self.round_completed.emit()
+
+    # Analisis -----------------------------------------------------------------------
+    def check_bingo_actions(self, bingo_name, bingo_numbers, grid_matrix, action):       
+        # Diccionario para asociar las letras con los índices de las columnas
+        column_mapping = {'B': 0, 'I': 1, 'N': 2, 'G': 3, 'O': 4}
+
+        # Listas para guardar las acciones resaltadas
+        red_highlight = []
+        yellow_highlight = []
+
+        letter = action[0]  # Primera parte de la acción (B, I, N, G, O)
+        number = int(action[1:])  # Parte numérica de la acción
+
+        # Determinar el índice de la columna con base en la letra
+        column_index = column_mapping[letter]
+
+        # Buscar el número en la columna correspondiente
+        for row_index in range(len(bingo_numbers)):
+            if bingo_numbers[row_index][column_index] == number:
+                #Casillas de efectividad completa
+                if grid_matrix[row_index][column_index] == 1:
+                    red_highlight.append(action)
+                    self.bingos_carts[bingo_name]['boxes_to_fill'] -= 1
+
+                #Casillas de efectividad parcial
+                else:
+                    yellow_highlight.append(action)
+                    
+                remaining_cells = self.bingos_carts[bingo_name]['boxes_to_fill']
+                self.bingo_widgets[bingo_name + "_missing"].setText(f"Casillas restantes para completar el Bingo: {remaining_cells}")
+                break  # Salir del bucle una vez se ha encontrado la acción
+
+        return red_highlight, yellow_highlight
+
     def check_bingo_card(self):
         letter = self.letter_dropdown.currentText()
         number_input = self.number_input.text().strip()
@@ -792,39 +839,45 @@ class GameWindow(QWidget):
 
             # Actualizar la visualización del cartón de Bingo
             self.update_bingo_visualization(bingo_name, bingo_numbers, red_highlight, yellow_highlight)
+    
+    def update_data(self):
+        print(f">>> Jugada: {self.current_action}")
 
-    def check_bingo_actions(self, bingo_name, bingo_numbers, grid_matrix, action):       
-        # Diccionario para asociar las letras con los índices de las columnas
-        column_mapping = {'B': 0, 'I': 1, 'N': 2, 'G': 3, 'O': 4}
+        # Añadir nuevo número jugado y actualizar la tabla
+        new_number = int(self.current_action[1:])
+        if new_number not in self.played_numbers:
+            self.played_numbers.append(new_number)
+            self.update_numbers_table(new_number)
 
-        # Listas para guardar las acciones resaltadas
-        red_highlight = []
-        yellow_highlight = []
+        # Actualizar información de bingos
+        for key in self.bingos_carts.keys():
+            if self.bingos_carts[key]['boxes_to_fill'] == 0:
+                self.current_game['rounds'][self.round_number]['Ganador'] = "User"
+                self.round_win_details = key
+                self.round_win.emit()  # Emitir la señal cuando se gana la ronda
+                
+            self.bingos_carts[key]['boxes_to_fill'] = self.boxes_to_fill_total
 
-        letter = action[0]  # Primera parte de la acción (B, I, N, G, O)
-        number = int(action[1:])  # Parte numérica de la acción
+    def save_game_data(self):
+        #Actualizar ronda 
+        self.current_round["modification_time"] = str(datetime.now())  
 
-        # Determinar el índice de la columna con base en la letra
-        column_index = column_mapping[letter]
+        #Actualizar la acción
+        if self.current_action:
+            if self.current_action not in self.current_round['actions']:      
+                self.current_round['actions'].append(self.current_action)
 
-        # Buscar el número en la columna correspondiente
-        for row_index in range(len(bingo_numbers)):
-            if bingo_numbers[row_index][column_index] == number:
-                #Casillas de efectividad completa
-                if grid_matrix[row_index][column_index] == 1:
-                    red_highlight.append(action)
-                    self.bingos_carts[bingo_name]['boxes_to_fill'] -= 1
+        # Actualiza del juego
+        self.current_game['rounds'][self.round_number] = self.current_round
+        self.current_game['modification_time'] = str(datetime.now())
 
-                #Casillas de efectividad parcial
-                else:
-                    yellow_highlight.append(action)
-                    
-                remaining_cells = self.bingos_carts[bingo_name]['boxes_to_fill']
-                self.bingo_widgets[bingo_name + "_missing"].setText(f"Casillas restantes para completar el Bingo: {remaining_cells}")
-                break  # Salir del bucle una vez se ha encontrado la acción
+        # Actualización general
+        self.games[self.game_name] = self.current_game  
 
-        return red_highlight, yellow_highlight
+        with open(saved_games_path, 'w') as file:
+            json.dump(self.games, file, indent=4)
 
+    # Actualizar ventanas -----------------------------------------------------
     def setup_numbers_table(self):
         # Configuración de la tabla
         self.numbers_table = QTableWidget(5, 15)  # 5 filas (BINGO) y 16 columnas
@@ -872,7 +925,9 @@ class GameWindow(QWidget):
                 y0 = (i + 1) * cell_size
 
                 action = f"{headers[j]}{bingo_numbers[i][j]}"
-                if action in red_highlight:
+                if action == self.current_action and action in red_highlight:
+                    color = QColor('green')
+                elif action in red_highlight:
                     color = QColor('red')
                 elif action in yellow_highlight:
                     color = QColor('yellow')
@@ -918,62 +973,18 @@ class GameWindow(QWidget):
         self.statistics_table.setItem(0, 1, QTableWidgetItem(bingo_names_yellow))
         self.statistics_table.setItem(0, 2, QTableWidgetItem(bingo_names_na))
 
-    def update_numbers_table(self):        
+    def update_numbers_table(self, new_number):        
         for i, (start, end) in enumerate(ranges):
             for j in range(start, end):
                 item = self.numbers_table.item(i, j - start)
-                if j in self.played_numbers:
+                if j == new_number:
+                    item.setBackground(QColor('green'))  # Resaltar en verde
+                elif j in self.played_numbers:
                     item.setBackground(QColor('yellow'))  # Resaltar en amarillo
                 else:
                     item.setBackground(QColor('white'))  # Fondo blanco si no está jugado
 
-    def update_data(self):
-        print(f">>> Jugada: {self.current_action}")
-
-        # Añadir nuevo número jugado y actualizar la tabla
-        new_number = int(self.current_action[1:])
-        if new_number not in self.played_numbers:
-            self.played_numbers.append(new_number)
-            self.update_numbers_table()
-
-        # Actualizar información de bingos
-        for key in self.bingos_carts.keys():
-            if self.bingos_carts[key]['boxes_to_fill'] == 0:
-                self.current_game['rounds'][self.round_number]['Ganador'] = "User"
-                self.round_win_details = key
-                self.round_win.emit()  # Emitir la señal cuando se gana la ronda
-                
-            self.bingos_carts[key]['boxes_to_fill'] = self.boxes_to_fill_total
-
-    def register_external_winner(self):
-        # Abrir un cuadro de diálogo para ingresar el nombre del ganador
-        winner_name, ok = QInputDialog.getText(self, 'Ganador Externo', 'Alguien externo ha ganado. \nIngrese el nombre del ganador:')
-        
-        if ok and winner_name:
-            # Guardar o procesar el nombre del ganador según sea necesario
-            print(f">>> El ganador de la ronda: {winner_name}")
-            self.current_game['rounds'][self.round_number]['Ganador'] = winner_name
-            self.round_completed.emit()
-
-    def save_game_data(self):
-        #Actualizar ronda 
-        self.current_round["modification_time"] = str(datetime.now())  
-
-        #Actualizar la acción
-        if self.current_action:
-            if self.current_action not in self.current_round['actions']:      
-                self.current_round['actions'].append(self.current_action)
-
-        # Actualiza del juego
-        self.current_game['rounds'][self.round_number] = self.current_round
-        self.current_game['modification_time'] = str(datetime.now())
-
-        # Actualización general
-        self.games[self.game_name] = self.current_game  
-
-        with open(saved_games_path, 'w') as file:
-            json.dump(self.games, file, indent=4)
-
+    # Salir --------------------------------------------------------------------
     def closeEvent(self, event):
         if self.show_exit_confirmation:
             # Confirmar salida
